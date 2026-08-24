@@ -77,6 +77,18 @@ description: Routes reverse engineering, exploitation, penetration testing, malw
 | **邮件安全** | `email-security/` | 钓鱼拆解、SPF/DKIM/DMARC、BEC |
 | **联邦身份** | `identity-federation/` | SAML/OIDC/OAuth SSO 流与错配 |
 | **RF / SDR** | `radio-sdr/` | 授权射频研究、默认只收 |
+| **动态插桩（用户态）** | `frida-dbi/` | Frida hook/Stalker/反反调试/il2cpp；采集明文与运行时偏移验证 |
+| **WinDbg / TTD** | `windbg-ttd/` | KDNET 内核调试、dump 分检（!analyze/0x109）、时间旅行回溯、cdb 自动化 |
+| **VBS / HVCI 研究** | `vbs-hvci-research/` | VTL1 边界、Secure Kernel/Ium 攻击面、Credential Guard、technique 存活表 |
+| **Secure Boot / UEFI** | `secure-boot-uefi-research/` | PK/KEK/db/dbx、BCD 策略、BitLocker PCR 绑定、bootkit 先例类 |
+| **驱动通信** | `driver-comm/` | IOCTL/共享节/inverted-call 设计与逆向；METHOD_NEITHER 陷阱 |
+| **内核回调** | `kernel-callbacks/` | Ps*/Ob/Cm 枚举、归属、unlink vs proxy vs EPT hide |
+| **模式扫描** | `pattern-scanner/` | 签名格式/掩码设计/Horspool+SIMD/唯一性验证管线 |
+| **PE 工程** | `pe-tools/` | 头/目录解析、rebuild、manual-map 顺序、dump 重建、PDB GUID 提取 |
+| **偏移 Dumper** | `offset-dumper/` | UE/Unity/Source 管线、build 钉版、漂移告警、绑定生成 |
+| **网络协议逆向** | `network-protocol-re/` | 抓包层选择、帧/opcode 发现、加密识别、replay+fuzz |
+| **ImGui Overlay** | `imgui-overlay/` | 内部 present-hook vs 外部透明窗、输入/DPI/可检测性 |
+| **隐蔽 Hypervisor** | `stealth-hypervisor/` | 检测面模型、VMFUNC split-view、TSC 纪律、嵌套虚化 |
 
 ## 统一入口
 

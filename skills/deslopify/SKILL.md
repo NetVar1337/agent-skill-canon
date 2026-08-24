@@ -7,9 +7,10 @@ description: >
   both-sidesing), rewrites by meaning, then re-scans until the text is clean
   and sits in the right register for its genre: academic article, tweet,
   reddit post, email, blog, docs, marketing. Use when the user says
-  "deslopify", "deslop", "de-slop this", "remove the AI tells", "humanize
-  this", "make this not sound like AI", or invokes /deslopify. Also use
-  before publishing any agent-drafted prose.
+  "deslopify", "deslop", "de-slop this", "fuck slop", "f*ck slop",
+  "remove the AI tells", "humanize this", "make this not sound like AI",
+  or invokes /deslopify or /fuck-slop. Also use before publishing any
+  agent-drafted prose.
 ---
 
 # Deslopify
