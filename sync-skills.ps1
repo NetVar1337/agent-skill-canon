@@ -12,7 +12,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 # Non-skill assets in the canon root that must not be mirrored as skills
-$skip = @("field-journal", "ops", "references", "scripts", "LOCAL-OPERATOR.md")
+$skip = @("field-journal", "ops", "references", "scripts")
+# Root-level docs that SHOULD mirror (tooling truth + pack doc)
+$rootDocs = @("tool-index.md", "LOCAL-OPERATOR.md")
 
 function Get-TreeDigest($dir) {
     $files = Get-ChildItem $dir -Recurse -File -ErrorAction SilentlyContinue |
@@ -52,6 +54,17 @@ foreach ($t in $Targets) {
         if (-not (Test-Path (Join-Path $Source $td.Name))) {
             if (-not $WhatIf) { Remove-Item $td.FullName -Recurse -Force }
             $removed++
+        }
+    }
+
+    # Mirror root-level docs
+    foreach ($doc in $rootDocs) {
+        $srcDoc = Join-Path $Source $doc
+        $dstDoc = Join-Path $t $doc
+        if (Test-Path $srcDoc) {
+            if (-not (Test-Path $dstDoc) -or (Get-FileHash $srcDoc).Hash -ne (Get-FileHash $dstDoc).Hash) {
+                if (-not $WhatIf) { Copy-Item $srcDoc $dstDoc -Force }
+            }
         }
     }
 
