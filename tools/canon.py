@@ -123,6 +123,15 @@ def skill_paths() -> list[Path]:
     )
 
 
+def text_sha256(path: Path) -> str:
+    normalized = (
+        path.read_text(encoding="utf-8", errors="replace")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+    )
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def discover() -> list[Skill]:
     domains = load_domains()
     result: list[Skill] = []
@@ -138,7 +147,7 @@ def discover() -> list[Skill]:
                 version=meta.get("version", ""),
                 license=meta.get("license", ""),
                 path=rel,
-                sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                sha256=text_sha256(path),
                 references=sum(1 for p in path.parent.rglob("*") if p.is_file() and "references" in p.parts),
                 scripts=sum(1 for p in path.parent.rglob("*") if p.is_file() and "scripts" in p.parts),
                 quality=quality_score(meta, body, path),

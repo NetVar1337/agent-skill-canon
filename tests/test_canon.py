@@ -48,6 +48,15 @@ class FrontmatterTests(unittest.TestCase):
         canon.ROOT = path.parent
         self.assertEqual(canon.broken_links(path, body), ["references/missing.md"])
 
+    def test_text_hash_is_independent_of_line_endings(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        lf, crlf = root / "lf.md", root / "crlf.md"
+        lf.write_bytes(b"one\ntwo\n")
+        crlf.write_bytes(b"one\r\ntwo\r\n")
+        self.assertEqual(canon.text_sha256(lf), canon.text_sha256(crlf))
+
     def test_discovers_lowercase_skill_filename(self) -> None:
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
