@@ -1,12 +1,16 @@
 ---
 name: ponytail-gain
-description: >
-  Show ponytail's measured impact as a compact scoreboard: less code, less
-  cost, more speed, from the benchmark medians. One-shot display, not a
-  persistent mode, and not a per-repo number. Trigger: /ponytail-gain,
-  "ponytail gain", "what does ponytail save", "show ponytail impact",
-  "ponytail scoreboard".
+description: "Use to show ponytail impact scoreboard from benchmark medians (/ponytail-gain)."
+version: 1.0.0
+license: MIT
+metadata:
+  package: unleash-skills
+  author: NetVar1337/unleash
+  category: coding
+  upstream: https://github.com/DietrichGebert/ponytail
 ---
+
+> Bundled with Unleash skills pack. Upstream: https://github.com/DietrichGebert/ponytail
 
 # Ponytail Gain
 

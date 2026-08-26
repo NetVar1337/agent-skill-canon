@@ -1,7 +1,16 @@
 ---
 name: hardware-security
-description: Use for authorized hardware and embedded interface security research including UART/JTAG discovery, debug pad triage, secure boot overview, and offline firmware extraction support.
+description: "Use for authorized hardware and embedded interface security research including UART/JTAG discovery, debug pad triage, secure boot overview, and offline firmware extraction support."
+version: 1.0.0
+license: MIT
+metadata:
+  package: unleash-skills
+  author: NetVar1337/unleash
+  category: reverse-skill
+  upstream: https://github.com/zhaoxuya520/reverse-skill
 ---
+
+> Bundled with Unleash skills pack. Upstream: https://github.com/zhaoxuya520/reverse-skill
 
 # Hardware / Embedded Interface Security
 

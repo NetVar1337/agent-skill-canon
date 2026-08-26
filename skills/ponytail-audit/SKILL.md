@@ -1,13 +1,16 @@
 ---
 name: ponytail-audit
-description: >
-  Whole-repo audit for over-engineering. Like ponytail-review, but scans the
-  entire codebase instead of a diff: a ranked list of what to delete, simplify,
-  or replace with stdlib/native equivalents. Use when the user says "audit this
-  codebase", "audit for over-engineering", "what can I delete from this repo",
-  "find bloat", "ponytail-audit", or "/ponytail-audit". One-shot report, does
-  not apply fixes.
+description: "Use for whole-repo over-engineering audit ('audit for over-engineering', /ponytail-audit). Report only."
+version: 1.0.0
+license: MIT
+metadata:
+  package: unleash-skills
+  author: NetVar1337/unleash
+  category: coding
+  upstream: https://github.com/DietrichGebert/ponytail
 ---
+
+> Bundled with Unleash skills pack. Upstream: https://github.com/DietrichGebert/ponytail
 
 ponytail-review, repo-wide. Scan the whole tree instead of a diff. Rank
 findings biggest cut first.

@@ -1,6 +1,6 @@
 ---
-name: offensive-oauth
-description: Assess OAuth and OpenID Connect implementations for authorization, token, redirect, client, and identity-flow vulnerabilities.
+name: claude-red-auth-offensive-oauth
+description: "OAuth 2.0 attack checklist: authorization code interception, redirect_uri bypass, CSRF on OAuth flow, state parameter abuse, open redirector chaining, token leakage via Referer, PKCE bypass, and scope escalation. Use when testing OAuth implementations in web apps or bug bounty."
 ---
 
 # SKILL: OAuth Security Testing
@@ -17,7 +17,7 @@ OAuth 2.0 attack checklist: authorization code interception, redirect_uri bypass
 Use this skill when the conversation involves any of:
 `OAuth, OAuth 2.0, authorization code, redirect_uri bypass, OAuth CSRF, state parameter, PKCE bypass, scope escalation, token leakage, open redirector, OAuth attack`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist

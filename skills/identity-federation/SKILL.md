@@ -1,7 +1,16 @@
 ---
 name: identity-federation
-description: Use for authorized assessment of federated identity systems including SAML, OIDC, OAuth2 flows, SSO misconfiguration, and token confusion issues.
+description: "Use for authorized assessment of federated identity systems including SAML, OIDC, OAuth2 flows, SSO misconfiguration, and token confusion issues."
+version: 1.0.0
+license: MIT
+metadata:
+  package: unleash-skills
+  author: NetVar1337/unleash
+  category: reverse-skill
+  upstream: https://github.com/zhaoxuya520/reverse-skill
 ---
+
+> Bundled with Unleash skills pack. Upstream: https://github.com/zhaoxuya520/reverse-skill
 
 # Identity Federation (SAML / OIDC / OAuth)
 

@@ -1,7 +1,16 @@
 ---
 name: radio-sdr
-description: Use for authorized RF/SDR security research including signal identification, replay feasibility study in shielded labs, and wireless protocol analysis outside classic Wi-Fi.
+description: "Use for authorized RF/SDR security research including signal identification, replay feasibility study in shielded labs, and wireless protocol analysis outside classic Wi-Fi."
+version: 1.0.0
+license: MIT
+metadata:
+  package: unleash-skills
+  author: NetVar1337/unleash
+  category: reverse-skill
+  upstream: https://github.com/zhaoxuya520/reverse-skill
 ---
+
+> Bundled with Unleash skills pack. Upstream: https://github.com/zhaoxuya520/reverse-skill
 
 # RF / SDR Security Research
 

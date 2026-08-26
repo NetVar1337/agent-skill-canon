@@ -327,7 +327,7 @@ description: "Comprehensive OSINT methodology skill for offensive security, red 
 | Tool | Strength |
 |------|---------|
 | [ChatGPT](https://chat.openai.com/) (paid) | Log parsing, dataset analysis, Code Interpreter for CSVs/JSON, GPT-4 Vision for image OCR |
-| [Codex](https://Codex.ai/) (paid) | 200K token context for large document dumps and report synthesis |
+| [Claude](https://claude.ai/) (paid) | 200K token context for large document dumps and report synthesis |
 | [Gemini 1.5 Pro](https://gemini.google.com/) | 2M token context; Deep Research mode with citations |
 | [Perplexity Pro](https://www.perplexity.ai/) (paid) | Real-time web search + reasoning; multi-query synthesis |
 

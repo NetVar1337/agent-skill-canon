@@ -1,7 +1,16 @@
 ---
 name: digital-forensics
-description: Use for authorized digital forensics including memory dumps, disk timelines, PCAP investigation, artifact triage, and IR evidence preservation.
+description: "Use for authorized digital forensics including memory dumps, disk timelines, PCAP investigation, artifact triage, and IR evidence preservation."
+version: 1.0.0
+license: MIT
+metadata:
+  package: unleash-skills
+  author: NetVar1337/unleash
+  category: reverse-skill
+  upstream: https://github.com/zhaoxuya520/reverse-skill
 ---
+
+> Bundled with Unleash skills pack. Upstream: https://github.com/zhaoxuya520/reverse-skill
 
 # Digital Forensics & IR Artifacts
 

@@ -1,6 +1,6 @@
 ---
-name: offensive-ai-security
-description: Test AI and LLM systems for prompt injection, model abuse, insecure integrations, data exposure, and related AI security weaknesses.
+name: claude-red-ai-offensive-ai-security
+description: "AI/LLM security offensive checklist: prompt injection, jailbreaking, model extraction, training data poisoning, adversarial inputs, LLM-assisted attack automation, and AI system reconnaissance. Use when assessing AI/ML systems, red-teaming LLMs, or researching AI attack vectors."
 ---
 
 # SKILL: AI Pentest
@@ -17,7 +17,7 @@ AI/LLM security offensive checklist: prompt injection, jailbreaking, model extra
 Use this skill when the conversation involves any of:
 `AI security, LLM security, prompt injection, jailbreak, model extraction, training data poisoning, adversarial input, AI red team, ML security, RAG poisoning, AI attack`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist
@@ -516,7 +516,7 @@ Systematic processes and tools for AI/LLM penetration testing:
 - **Adversarial Robustness Toolbox (ART)**: Python library for ML security.
 - **`promptfoo`**: Tool for testing and evaluating LLM prompt quality, adaptable for security testing.
 - **PyRIT (Microsoft 2024)**: Python Risk Identification Toolkit for automated red-teaming; orchestrates multi-turn attacks, generates adversarial suffixes, and tracks objective completion.
-- **Garak 0.9+**: Updated with 2025 probe sets for GPT-4o, Codex 3.5, Gemini Ultra; includes hallucination, toxicity, and PII leakage detectors.
+- **Garak 0.9+**: Updated with 2025 probe sets for GPT-4o, Claude 3.5, Gemini Ultra; includes hallucination, toxicity, and PII leakage detectors.
 - **NeMo Guardrails**: NVIDIA's runtime guardrails; test for bypass via nested JSON, prompt fragments, and policy conflicts.
 - **Guardrails AI**: Schema-driven validation; attempt type coercion, over-long strings, and missing required fields to test fail-closed behavior.
 

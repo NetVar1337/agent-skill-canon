@@ -1,6 +1,6 @@
 ---
 name: offensive-cloud
-description: "Cloud attack methodology for AWS, Azure, and GCP. Covers credential harvesting, cloud-specific enumeration, IAM privilege escalation, persistence, data exfiltration, cross-account and cross-project lateral movement, serverless attacks, EKS/AKS/GKE paths, and CSPM evasion. Use for cloud-account engagements, stolen cloud credentials, or cloud posture assessments."
+description: "Use when assessing AWS, Azure, or GCP security: identity enumeration, IAM privilege paths, cloud resource exposure, persistence review, lateral movement, serverless risks, and evidence-driven reporting."
 ---
 
 # Cloud (AWS / Azure / GCP) — Offensive Testing Methodology
@@ -45,7 +45,7 @@ From SSRF, IMDSv2 was historically reachable when the SSRF allowed setting custo
 ### Privilege Escalation Paths
 
 | Path | Required Permission | Outcome |
-| ------ | --------------------- | --------- |
+|------|---------------------|---------|
 | `iam:PassRole` + `lambda:CreateFunction` | Pass any role to Lambda you create | Run code as that role |
 | `iam:PassRole` + `ec2:RunInstances` | Pass any role to EC2 instance | IMDS → role creds |
 | `iam:CreatePolicyVersion` + `iam:SetDefaultPolicyVersion` | Edit your own policy | Self-elevate |
@@ -141,7 +141,7 @@ curl -H "Metadata:true" \
 ### Privilege Escalation Paths
 
 | Path | Required Role / Permission | Outcome |
-| ------ | --------------------------- | --------- |
+|------|---------------------------|---------|
 | User Access Administrator on self/sub | Grant self Owner | Subscription Owner |
 | App Registration owner | Add cert/secret, mint app-only tokens | App's permissions |
 | Virtual Machine Contributor + Reader on KV | Run command on VM with MSI → KV | Secrets |
@@ -219,7 +219,7 @@ curl -H "Metadata-Flavor: Google" \
 ### Privilege Escalation Paths
 
 | Path | Required Permission | Outcome |
-| ------ | --------------------- | --------- |
+|------|---------------------|---------|
 | `iam.serviceAccountTokenCreator` on SA | Mint tokens as SA | SA's perms |
 | `iam.serviceAccountUser` + `compute.instances.create` | Pass SA to new VM | Run as SA via IMDS |
 | `iam.serviceAccountKeyAdmin` | Create JSON key for any SA | Persistent SA creds |
@@ -273,7 +273,6 @@ gcloud projects list --filter="parent.id=<folder-id>"
 ### CI/CD as the Pivot
 
 Most cloud takeovers in 2024-2025 start with CI tokens:
-
 - GitHub Actions OIDC misconfigured → assume any AWS role with weak `sub` claim
 - GitLab CI pushed to wrong branch → gains prod role
 - Jenkins agent with cloud credentials in env
@@ -305,17 +304,17 @@ ECR/ACR/Artifact Registry — if you have push perms on a tag in use by producti
 ## Tooling Matrix
 
 | Tool | AWS | Azure | GCP | Use |
-| ------ | ----- | ------- | ----- | ----- |
+|------|-----|-------|-----|-----|
 | ScoutSuite | ✓ | ✓ | ✓ | Posture audit |
 | Prowler | ✓ | ✓ | ✓ | CIS/PCI checks |
-| Pacu | ✓ | | | Offensive framework |
-| CloudGoat | ✓ | | | Vulnerable lab |
-| BloodHound + AzureHound | | ✓ | | Graph-based escalation |
-| ROADtools | | ✓ | | AAD recon + offline analysis |
-| MicroBurst | | ✓ | | PS-based offensive |
-| Stormspotter | | ✓ | | MS' own offensive enum |
-| gcp_scanner | | | ✓ | Token-based recon |
-| GCPBucketBrute | | | ✓ | GCS bucket discovery |
+| Pacu | ✓ |   |   | Offensive framework |
+| CloudGoat | ✓ |   |   | Vulnerable lab |
+| BloodHound + AzureHound |   | ✓ |   | Graph-based escalation |
+| ROADtools |   | ✓ |   | AAD recon + offline analysis |
+| MicroBurst |   | ✓ |   | PS-based offensive |
+| Stormspotter |   | ✓ |   | MS' own offensive enum |
+| gcp_scanner |   |   | ✓ | Token-based recon |
+| GCPBucketBrute |   |   | ✓ | GCS bucket discovery |
 
 ---
 
@@ -344,4 +343,4 @@ ECR/ACR/Artifact Registry — if you have push perms on a tag in use by producti
 - HackTricks Cloud — ongoing reference for newest paths
 - "Pacu" framework docs — pacu.aws.cloud
 - MITRE ATT&CK Cloud Matrix
-- Source: <https://github.com/SnailSploit/offensive-checklist/blob/main/cloud.md>
+- Source: https://github.com/SnailSploit/offensive-checklist/blob/main/cloud.md

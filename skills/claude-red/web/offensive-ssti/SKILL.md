@@ -1,6 +1,6 @@
 ---
-name: offensive-ssti
-description: Detect and exploit server-side template injection across template engines, sandboxes, and application contexts.
+name: claude-red-web-offensive-ssti
+description: "Server-Side Template Injection testing checklist: template engine identification (Jinja2, Twig, Freemarker, Pebble, Velocity), polyglot detection payloads, engine-specific RCE payloads, blind SSTI, and filter bypass. Use when testing web apps for template injection vulnerabilities."
 ---
 
 # SKILL: Server-Side Template Injection (SSTI)
@@ -17,7 +17,7 @@ Server-Side Template Injection testing checklist: template engine identification
 Use this skill when the conversation involves any of:
 `SSTI, server-side template injection, Jinja2, Twig, Freemarker, Pebble, Velocity, template injection, template RCE, polyglot payload, template engine, blind SSTI`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist

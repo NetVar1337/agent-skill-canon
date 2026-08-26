@@ -1,6 +1,6 @@
 ---
-name: offensive-rce
-description: Identify and validate remote code execution paths across web applications, APIs, interpreters, templates, and system integrations.
+name: claude-red-web-offensive-rce
+description: "Remote Code Execution testing checklist: OS command injection, SSTI-to-RCE, deserialization RCE, file upload RCE, XXE with SSRF to RCE, RCE via dependency confusion, and CVE-based RCE patterns. Use for web app pentests and bug bounty RCE discovery."
 ---
 
 # SKILL: Remote Code Execution
@@ -17,7 +17,7 @@ Remote Code Execution testing checklist: OS command injection, SSTI-to-RCE, dese
 Use this skill when the conversation involves any of:
 `RCE, remote code execution, command injection, OS injection, SSTI RCE, deserialization RCE, file upload RCE, XXE RCE, dependency confusion, code execution`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist

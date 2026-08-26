@@ -1,10 +1,16 @@
 ---
 name: ponytail-help
-description: >
-  Quick-reference card for all ponytail modes, skills, and commands.
-  One-shot display, not a persistent mode. Trigger: /ponytail-help,
-  "ponytail help", "what ponytail commands", "how do I use ponytail".
+description: "Use for ponytail commands quick-reference (/ponytail-help)."
+version: 1.0.0
+license: MIT
+metadata:
+  package: unleash-skills
+  author: NetVar1337/unleash
+  category: coding
+  upstream: https://github.com/DietrichGebert/ponytail
 ---
+
+> Bundled with Unleash skills pack. Upstream: https://github.com/DietrichGebert/ponytail
 
 # Ponytail Help
 

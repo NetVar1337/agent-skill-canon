@@ -6,10 +6,10 @@ usage() {
   cat <<EOF
 Usage: decompile.sh [OPTIONS] <file>
 
-Decompile an Android APK, XAPK, JAR, or AAR file.
+Decompile an Android APK, XAPK, AAB, DEX, JAR, or AAR file.
 
 Arguments:
-  <file>            Path to the .apk, .xapk, .jar, or .aar file
+  <file>            Path to the .apk, .xapk, .aab, .dex, .jar, or .aar file
 
 Options:
   -o, --output DIR  Output directory (default: <filename>-decompiled)
@@ -32,6 +32,8 @@ Environment:
 Examples:
   decompile.sh app-release.apk
   decompile.sh app-bundle.xapk
+  decompile.sh app-bundle.aab
+  decompile.sh classes.dex
   decompile.sh --engine both --deobf app-release.apk
   decompile.sh --engine fernflower library.jar
 EOF
@@ -71,9 +73,9 @@ fi
 ext="${INPUT_FILE##*.}"
 ext_lower=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
 case "$ext_lower" in
-  apk|xapk|jar|aar) ;;
+  apk|xapk|aab|dex|jar|aar) ;;
   *)
-    echo "Error: Unsupported file type '.$ext'. Expected .apk, .xapk, .jar, or .aar" >&2
+    echo "Error: Unsupported file type '.$ext'. Expected .apk, .xapk, .aab, .dex, .jar, or .aar" >&2
     exit 1
     ;;
 esac
@@ -129,6 +131,68 @@ if [[ "$ext_lower" == "xapk" ]]; then
   echo
 fi
 
+# --- AAB handling ---
+# AAB (Android App Bundle) requires bundletool to extract APKs.
+AAB_EXTRACTED_APK=""
+
+if [[ "$ext_lower" == "aab" ]]; then
+  echo "=== Processing AAB (Android App Bundle) ==="
+
+  # Locate bundletool
+  BUNDLETOOL_CMD=""
+  if command -v bundletool &>/dev/null; then
+    BUNDLETOOL_CMD="bundletool"
+  elif [[ -n "${BUNDLETOOL_JAR_PATH:-}" ]] && [[ -f "$BUNDLETOOL_JAR_PATH" ]]; then
+    BUNDLETOOL_CMD="java -jar $BUNDLETOOL_JAR_PATH"
+  else
+    # Check common locations
+    for candidate in \
+      "$HOME/.local/share/bundletool/bundletool.jar" \
+      "$HOME/bundletool/bundletool.jar"; do
+      if [[ -f "$candidate" ]]; then
+        BUNDLETOOL_CMD="java -jar $candidate"
+        break
+      fi
+    done
+  fi
+
+  if [[ -z "$BUNDLETOOL_CMD" ]]; then
+    echo "Error: bundletool is required to process AAB files." >&2
+    echo "Install bundletool — see references/setup-guide.md" >&2
+    exit 1
+  fi
+
+  AAB_TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/aab-extract-XXXXXX")
+  AAB_APKS_FILE="$AAB_TMP_DIR/output.apks"
+
+  echo "Generating universal APK from AAB..."
+  $BUNDLETOOL_CMD build-apks \
+    --bundle="$INPUT_FILE_ABS" \
+    --output="$AAB_APKS_FILE" \
+    --mode=universal 2>&1
+
+  # Extract the universal APK from the .apks archive
+  unzip -qo "$AAB_APKS_FILE" -d "$AAB_TMP_DIR/extracted" 2>/dev/null
+  AAB_EXTRACTED_APK=$(find "$AAB_TMP_DIR/extracted" -name "*.apk" | head -1)
+
+  if [[ -z "$AAB_EXTRACTED_APK" || ! -f "$AAB_EXTRACTED_APK" ]]; then
+    echo "Error: Failed to extract APK from AAB bundle." >&2
+    rm -rf "$AAB_TMP_DIR"
+    exit 1
+  fi
+
+  echo "Extracted universal APK: $(basename "$AAB_EXTRACTED_APK")"
+  echo
+
+  # Override input to the extracted APK for decompilation
+  INPUT_FILE_ABS="$AAB_EXTRACTED_APK"
+  ext_lower="apk"
+fi
+
+# --- DEX handling ---
+# DEX files can be decompiled directly by jadx, or converted via dex2jar for Fernflower.
+# No special extraction needed — jadx handles .dex natively.
+
 # --- Locate fernflower JAR ---
 find_fernflower_jar() {
   if [[ -n "${FERNFLOWER_JAR_PATH:-}" ]] && [[ -f "$FERNFLOWER_JAR_PATH" ]]; then
@@ -137,6 +201,7 @@ find_fernflower_jar() {
   fi
   # Check common locations
   for candidate in \
+    "$HOME/.local/share/vineflower/vineflower.jar" \
     "$HOME/fernflower/build/libs/fernflower.jar" \
     "$HOME/vineflower/build/libs/vineflower.jar" \
     "$HOME/fernflower/fernflower.jar" \
@@ -163,8 +228,6 @@ find_dex2jar() {
 # --- jadx decompilation ---
 run_jadx() {
   local out_dir="$1"
-  local jadx_status=0
-  local count=0
 
   if ! command -v jadx &>/dev/null; then
     echo "Error: jadx is not installed or not in PATH." >&2
@@ -179,41 +242,20 @@ run_jadx() {
   args+=("$INPUT_FILE_ABS")
 
   echo "Running: jadx ${args[*]}"
-  if jadx "${args[@]}"; then
-    jadx_status=0
-  else
-    jadx_status=$?
-  fi
+  jadx "${args[@]}"
 
   echo "jadx output: $out_dir/sources/"
   if [[ -d "$out_dir/sources" ]]; then
+    local count
     count=$(find "$out_dir/sources" -name "*.java" | wc -l)
     echo "Java files decompiled by jadx: $count"
   fi
-
-  if [[ $jadx_status -eq 0 ]]; then
-    return 0
-  fi
-
-  if [[ $count -gt 0 ]]; then
-    echo "Warning: jadx exited with status $jadx_status after writing $count Java files; treating this as partial success." >&2
-    return 2
-  fi
-
-  echo "Error: jadx failed with status $jadx_status and produced no Java output." >&2
-  return 1
 }
 
 # --- Fernflower decompilation ---
 run_fernflower() {
   local out_dir="$1"
   local jar_to_decompile=""
-  local converted_jar=""
-  local intermediate_dir="$out_dir/intermediate"
-  local ff_status=0
-  local d2j_status=0
-  local count=0
-  local ff_timeout_seconds="${FERNFLOWER_TIMEOUT_SECONDS:-900}"
 
   local ff_jar
   if ! ff_jar=$(find_fernflower_jar); then
@@ -224,8 +266,8 @@ run_fernflower() {
 
   mkdir -p "$out_dir"
 
-  # For APK/AAR, we need dex2jar first to convert DEX→JAR
-  if [[ "$ext_lower" == "apk" || "$ext_lower" == "aar" ]]; then
+  # For APK/AAR/DEX, we need dex2jar first to convert DEX→JAR
+  if [[ "$ext_lower" == "apk" || "$ext_lower" == "aar" || "$ext_lower" == "dex" ]]; then
     local d2j
     if ! d2j=$(find_dex2jar); then
       echo "Error: dex2jar is required to use Fernflower on .$ext_lower files." >&2
@@ -234,19 +276,11 @@ run_fernflower() {
     fi
 
     echo "Converting $ext_lower to JAR with dex2jar..."
-    mkdir -p "$intermediate_dir"
-    converted_jar="$intermediate_dir/${BASENAME}-dex2jar.jar"
-    if "$d2j" -f -o "$converted_jar" "$INPUT_FILE_ABS" 2>&1; then
-      d2j_status=0
-    else
-      d2j_status=$?
-    fi
+    local converted_jar="$out_dir/${BASENAME}-dex2jar.jar"
+    "$d2j" -f -o "$converted_jar" "$INPUT_FILE_ABS" 2>&1 || true
     if [[ ! -f "$converted_jar" ]]; then
-      echo "Error: dex2jar conversion failed with status $d2j_status." >&2
+      echo "Error: dex2jar conversion failed." >&2
       return 1
-    fi
-    if [[ $d2j_status -ne 0 ]]; then
-      echo "Warning: dex2jar exited with status $d2j_status but produced $converted_jar; continuing." >&2
     fi
     jar_to_decompile="$converted_jar"
   else
@@ -264,83 +298,25 @@ run_fernflower() {
   ff_args+=("$out_dir")
 
   echo "Running: java -jar $ff_jar ${ff_args[*]}"
-  if command -v timeout &>/dev/null && [[ "$ff_timeout_seconds" =~ ^[0-9]+$ ]] && (( ff_timeout_seconds > 0 )); then
-    echo "Fernflower timeout: ${ff_timeout_seconds}s (override with FERNFLOWER_TIMEOUT_SECONDS)"
-    if timeout "${ff_timeout_seconds}s" java -jar "$ff_jar" "${ff_args[@]}"; then
-      ff_status=0
-    else
-      ff_status=$?
-    fi
-  elif java -jar "$ff_jar" "${ff_args[@]}"; then
-    ff_status=0
-  else
-    ff_status=$?
-  fi
+  java -jar "$ff_jar" "${ff_args[@]}"
 
   # Fernflower outputs a JAR containing .java files — extract it
   local result_jar="$out_dir/$(basename "$jar_to_decompile")"
   if [[ -f "$result_jar" ]]; then
     local sources_dir="$out_dir/sources"
     mkdir -p "$sources_dir"
-    if unzip -qo "$result_jar" -d "$sources_dir"; then
-      rm -f "$result_jar"
-    else
-      echo "Warning: Fernflower result jar $result_jar could not be extracted; checking for direct folder output." >&2
-    fi
-  fi
-
-  local sources_dir="$out_dir/sources"
-  mkdir -p "$sources_dir"
-  count=$(find "$sources_dir" -name "*.java" | wc -l)
-
-  # Vineflower may write sources directly into the destination folder tree instead of a result jar.
-  if [[ $count -eq 0 ]]; then
-    local direct_count=0
-    direct_count=$(find "$out_dir" \
-      -path "$sources_dir" -prune -o \
-      -path "$intermediate_dir" -prune -o \
-      -name "*.java" -type f -print | wc -l)
-    if [[ $direct_count -gt 0 ]]; then
-      while IFS= read -r -d '' entry; do
-        mv "$entry" "$sources_dir"/
-      done < <(find "$out_dir" -mindepth 1 -maxdepth 1 \
-        ! -name "sources" \
-        ! -name "intermediate" \
-        -print0)
-      count=$(find "$sources_dir" -name "*.java" | wc -l)
-    fi
+    unzip -qo "$result_jar" -d "$sources_dir"
+    rm -f "$result_jar"
+    echo "Fernflower output: $sources_dir/"
+    local count
+    count=$(find "$sources_dir" -name "*.java" | wc -l)
+    echo "Java files decompiled by Fernflower: $count"
   fi
 
   # Clean up intermediate dex2jar output
-  if [[ $count -gt 0 ]]; then
-    echo "Fernflower output: $sources_dir/"
-    echo "Java files decompiled by Fernflower: $count"
-    if [[ -n "${converted_jar:-}" ]] && [[ -f "${converted_jar:-}" ]]; then
-      rm -f "$converted_jar"
-    fi
-    if [[ -d "$intermediate_dir" ]]; then
-      rmdir "$intermediate_dir" 2>/dev/null || true
-    fi
-    if [[ $ff_status -ne 0 ]]; then
-      echo "Warning: Fernflower/Vineflower exited with status $ff_status after writing $count Java files; treating this as partial success." >&2
-      return 2
-    fi
-    return 0
-  fi
-
   if [[ -n "${converted_jar:-}" ]] && [[ -f "${converted_jar:-}" ]]; then
-    echo "Error: Fernflower/Vineflower produced no Java output. Intermediate dex2jar artifact kept at $converted_jar" >&2
-  else
-    echo "Error: Fernflower/Vineflower produced no Java output." >&2
+    rm -f "$converted_jar"
   fi
-
-  if [[ $ff_status -ne 0 ]]; then
-    if [[ $ff_status -eq 124 ]]; then
-      echo "Error: Fernflower/Vineflower exceeded timeout (${ff_timeout_seconds}s)." >&2
-    fi
-    echo "Error: Fernflower/Vineflower exited with status $ff_status." >&2
-  fi
-  return 1
 }
 
 # --- Summary helper ---
@@ -348,28 +324,9 @@ print_structure() {
   local src_dir="$1"
   local label="$2"
   if [[ -d "$src_dir" ]]; then
-    local packages=()
     echo
     echo "Top-level packages ($label):"
-    while IFS= read -r pkg; do
-      [[ -n "$pkg" ]] && packages+=("$pkg")
-    done < <(find "$src_dir" -mindepth 1 -maxdepth 3 -type d -printf '%P\n' | sort)
-
-    local limit=${#packages[@]}
-    if (( limit > 20 )); then
-      limit=20
-    fi
-
-    if (( limit == 0 )); then
-      echo "(none)"
-      return
-    fi
-
-    local i=0
-    while (( i < limit )); do
-      echo "${packages[$i]}"
-      ((i += 1))
-    done
+    find "$src_dir" -mindepth 1 -maxdepth 3 -type d | head -20 | sed "s|$src_dir/||" | grep -v '^$' | sort
   fi
 }
 
@@ -392,63 +349,19 @@ decompile_single() {
 
   case "$ENGINE" in
     jadx)
-      local jadx_status=0
-      if run_jadx "$out_dir"; then
-        jadx_status=0
-      else
-        jadx_status=$?
-      fi
+      run_jadx "$out_dir"
       print_structure "$out_dir/sources" "jadx"
-      if [[ $jadx_status -eq 1 ]]; then
-        return 1
-      fi
-      if [[ $jadx_status -eq 2 ]]; then
-        echo "jadx completed with warnings but produced usable output."
-      fi
       ;;
     fernflower)
-      local ff_status=0
-      if run_fernflower "$out_dir"; then
-        ff_status=0
-      else
-        ff_status=$?
-      fi
+      run_fernflower "$out_dir"
       print_structure "$out_dir/sources" "fernflower"
-      if [[ $ff_status -eq 1 ]]; then
-        return 1
-      fi
-      if [[ $ff_status -eq 2 ]]; then
-        echo "Fernflower completed with warnings but produced usable output."
-      fi
       ;;
     both)
-      local jadx_status=0
-      local ff_status=0
       echo "--- Pass 1: jadx ---"
-      if run_jadx "$out_dir/jadx"; then
-        jadx_status=0
-      else
-        jadx_status=$?
-      fi
-      if [[ $jadx_status -eq 1 ]]; then
-        return 1
-      fi
-      if [[ $jadx_status -eq 2 ]]; then
-        echo "Continuing to Fernflower because jadx produced usable output despite warnings."
-      fi
+      run_jadx "$out_dir/jadx"
       echo
       echo "--- Pass 2: Fernflower ---"
-      if run_fernflower "$out_dir/fernflower"; then
-        ff_status=0
-      else
-        ff_status=$?
-      fi
-      if [[ $ff_status -eq 1 ]]; then
-        return 1
-      fi
-      if [[ $ff_status -eq 2 ]]; then
-        echo "Continuing with Fernflower output because it produced usable sources despite warnings."
-      fi
+      run_fernflower "$out_dir/fernflower"
 
       print_structure "$out_dir/jadx/sources" "jadx"
       print_structure "$out_dir/fernflower/sources" "fernflower"
@@ -466,14 +379,8 @@ decompile_single() {
       echo "Fernflower:  $ff_count Java files"
 
       if [[ -d "$out_dir/jadx/sources" ]]; then
-        local jadx_error_files
         local jadx_errors
-        jadx_error_files=$(grep -rl 'JADX WARNING\|JADX WARN\|JADX ERROR\|Code decompiled incorrectly' "$out_dir/jadx/sources" 2>/dev/null || true)
-        if [[ -n "$jadx_error_files" ]]; then
-          jadx_errors=$(printf '%s\n' "$jadx_error_files" | wc -l)
-        else
-          jadx_errors=0
-        fi
+        jadx_errors=$(grep -rl 'JADX WARNING\|JADX WARN\|JADX ERROR\|Code decompiled incorrectly' "$out_dir/jadx/sources" 2>/dev/null | wc -l || echo 0)
         echo "jadx files with warnings/errors: $jadx_errors"
       fi
       echo
@@ -528,51 +435,11 @@ if [[ "$ext_lower" == "xapk" ]]; then
   ls -1 "$OUTPUT_DIR/"
 else
   decompile_single "$INPUT_FILE_ABS" "$OUTPUT_DIR" ""
-
-  # --- Split/bundled APK detection ---
-  # Some APKs are bundles: the outer APK contains base.apk + split_config.*.apk
-  # inside the resources directory. jadx will decompile the thin outer wrapper
-  # and produce very few Java files. Detect this and re-decompile base.apk.
-  sources_dir="$OUTPUT_DIR/sources"
-  resources_dir="$OUTPUT_DIR/resources"
-  if [[ -d "$sources_dir" && -d "$resources_dir" ]]; then
-    java_count=$(find "$sources_dir" -name "*.java" -type f 2>/dev/null | wc -l)
-    base_apk=$(find "$resources_dir" -maxdepth 1 -name "base.apk" -type f 2>/dev/null | head -1)
-    inner_apk_count=$(find "$resources_dir" -maxdepth 1 -name "*.apk" -type f 2>/dev/null | wc -l)
-
-    if [[ "$java_count" -le 10 && -n "$base_apk" ]]; then
-      echo
-      echo "=== Split/bundled APK detected ==="
-      echo "Outer APK produced only $java_count Java file(s) but contains $inner_apk_count inner APK(s):"
-      find "$resources_dir" -maxdepth 1 -name "*.apk" -type f -exec basename {} \; | while read -r f; do echo "  - $f"; done
-      echo
-      echo "Decompiling base.apk (contains the actual app code)..."
-      decompile_single "$base_apk" "$OUTPUT_DIR/base" "base.apk"
-
-      # Decompile non-config split APKs
-      while IFS= read -r -d '' split_apk; do
-        split_name=$(basename "$split_apk" .apk)
-        case "$split_name" in
-          base|split_config.*) continue ;;
-        esac
-        echo
-        echo "Decompiling $split_name.apk..."
-        decompile_single "$split_apk" "$OUTPUT_DIR/$split_name" "$split_name.apk"
-      done < <(find "$resources_dir" -maxdepth 1 -name "*.apk" -type f -print0 2>/dev/null)
-
-      # Report skipped config splits
-      config_splits=$(find "$resources_dir" -maxdepth 1 -name "split_config.*.apk" -type f 2>/dev/null)
-      if [[ -n "$config_splits" ]]; then
-        echo
-        echo "Skipped config splits (resource/ABI only):"
-        echo "$config_splits" | while read -r f; do echo "  - $(basename "$f")"; done
-      fi
-
-      echo
-      echo "Main decompiled source is in: $OUTPUT_DIR/base/sources/"
-    fi
-  fi
-
   echo
   echo "=== Decompilation complete ==="
+fi
+
+# Cleanup AAB temp directory if used
+if [[ -n "${AAB_TMP_DIR:-}" ]] && [[ -d "${AAB_TMP_DIR:-}" ]]; then
+  rm -rf "$AAB_TMP_DIR"
 fi

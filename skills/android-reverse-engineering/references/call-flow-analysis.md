@@ -35,14 +35,14 @@ Typical call chain from UI to network:
 
 ```
 Activity.onCreate()
-  → setContentView(R.layout.activity_main)
-  → findViewById() / View Binding
-  → button.setOnClickListener()
-    → onClick()
-      → viewModel.doSomething()
-        → repository.fetchData()
-          → apiService.getEndpoint()
-            → HTTP request
+  -> setContentView(R.layout.activity_main)
+  -> findViewById() / View Binding
+  -> button.setOnClickListener()
+    -> onClick()
+      -> viewModel.doSomething()
+        -> repository.fetchData()
+          -> apiService.getEndpoint()
+            -> HTTP request
 ```
 
 Key lifecycle methods to search:
@@ -80,11 +80,13 @@ grep -rn 'extends Application\|: Application()' sources/
 
 Look for:
 - Retrofit/OkHttp client setup
-- Dagger/Hilt component initialization
+- Dagger/Hilt/Koin component initialization
 - Firebase/analytics initialization
 - Base URL configuration
 
 ## 5. Dependency Injection
+
+Modern Android apps use DI frameworks. Trace bindings to find implementations.
 
 ### Dagger / Hilt
 
@@ -102,45 +104,118 @@ grep -rn '@Component\|@Subcomponent' sources/
 grep -rn '@Inject' sources/
 ```
 
+To trace a call flow through Dagger/Hilt:
+1. Find where an interface is used (e.g., `ApiService` injected into a repository)
+2. Find the `@Provides` or `@Binds` method that creates the implementation
+3. Follow the implementation to the actual HTTP call
+
 ### Koin
 
-Koin is the dominant DI framework in Kotlin Multiplatform and a large
-share of Kotlin-only Android apps. It uses a runtime DSL rather than
-compile-time generated factories, so the search patterns are different:
-
 ```bash
-# Confirm Koin is actually wired up
-grep -rn 'org\.koin\.' sources/
+# Koin module definitions
+grep -rn 'module\s*{\|single\s*{\|factory\s*{\|viewModel\s*{' sources/
 
-# DI module declarations
-grep -rn 'fun [A-Za-z]\+Module\|module\s*{\|module(' sources/
+# Koin injection in Activities/Fragments
+grep -rn 'by inject()\|by viewModel()\|get()\|koinApplication' sources/
 
-# Bindings inside a module DSL
-grep -rn 'single\s*[<{(]\|factory\s*[<{(]\|viewModel\s*[<{(]\|scoped\s*[<{(]\|singleOf\|factoryOf' sources/
-
-# Resolution call-sites (where a binding is consumed)
-grep -rn '\bget\s*<\|\binject\s*<\|by\s\+inject\b\|by\s\+viewModel\b\|getKoin' sources/
+# Koin start
+grep -rn 'startKoin\|KoinApplication\|androidContext' sources/
 ```
 
-After R8, every binding lambda becomes an anonymous
-`Function2<Scope, ParametersHolder, T>` impl. To find the binding for an
-interface `Foo`, look for files that contain both a Koin import / module
-DSL marker and a reference to `Foo`:
+To trace a call flow through Koin:
+1. Find `startKoin` in the Application class to locate module declarations
+2. In the module, find `single { }` or `factory { }` blocks that provide network-related classes
+3. Follow `by inject()` usage in Activities/ViewModels to see where those classes are consumed
+
+### Manual DI / Service Locator
+
+Some apps use manual DI patterns without a framework:
 
 ```bash
-grep -rln 'org\.koin\.core\.module' sources/ | xargs grep -l 'Foo'
+# Singleton patterns
+grep -rn 'companion object\|getInstance()\|INSTANCE' sources/
+
+# ServiceLocator pattern
+grep -rn 'ServiceLocator\|Locator\|Container' sources/
 ```
 
-### Trace through DI
+## 6. Kotlin Coroutines Flow
 
-1. Find where an interface is used (e.g. `ApiService` injected into a
-   repository).
-2. Find the `@Provides` / `@Binds` method (Hilt) **or** the
-   `single { ... }` / `factory { ... }` block (Koin) that creates the
-   implementation.
-3. Follow the implementation to the actual HTTP call.
+Modern Android apps use coroutines for async network calls. Understanding the flow is essential.
 
-## 6. Find Constants and Configuration
+### ViewModel → Repository → API
+
+```kotlin
+// ViewModel
+class LoginViewModel @Inject constructor(
+    private val repository: UserRepository
+) : ViewModel() {
+    private val _state = MutableStateFlow<LoginState>(LoginState.Idle)
+    val state: StateFlow<LoginState> = _state
+
+    fun login(email: String, password: String) {
+        viewModelScope.launch {
+            _state.value = LoginState.Loading
+            repository.login(email, password)
+                .collect { result ->
+                    _state.value = LoginState.Success(result)
+                }
+        }
+    }
+}
+
+// Repository
+class UserRepository(private val api: ApiService) {
+    fun login(email: String, password: String): Flow<LoginResponse> = flow {
+        emit(api.login(LoginRequest(email, password)))
+    }
+}
+```
+
+### Key search patterns for coroutine flows
+
+```bash
+# ViewModel scope launches (entry point for async work)
+grep -rn 'viewModelScope\.launch\|lifecycleScope\.launch' sources/
+
+# Flow collection in UI
+grep -rn '\.collect\s*{\|\.collectLatest\|repeatOnLifecycle' sources/
+
+# StateFlow observation
+grep -rn '\.stateIn\|\.shareIn\|MutableStateFlow\|StateFlow' sources/
+```
+
+## 7. RxJava Call Chains
+
+For apps using RxJava, follow the reactive chain:
+
+```bash
+# Find where observables are subscribed (the consumption point)
+grep -rn '\.subscribe\s*(\|\.subscribeWith' sources/
+
+# Find where observables are created (the source)
+grep -rn '\.create(\|\.just(\|\.fromCallable' sources/
+
+# Schedulers indicate thread switches (IO = network/disk)
+grep -rn 'Schedulers\.io\|subscribeOn\|observeOn' sources/
+
+# Composite disposables (lifecycle management)
+grep -rn 'CompositeDisposable\|\.add(\|\.dispose()' sources/
+```
+
+### Typical RxJava call chain
+
+```
+Activity.onClick()
+  -> viewModel.login()
+    -> repository.login()
+      -> apiService.login()         // Returns Single<LoginResponse>
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(onSuccess, onError)
+```
+
+## 8. Find Constants and Configuration
 
 Hardcoded values are rarely obfuscated:
 
@@ -156,55 +231,63 @@ grep -rn 'BuildConfig\.' sources/
 
 # SharedPreferences keys (runtime config)
 grep -rn 'getSharedPreferences\|getString(\|putString(' sources/
+
+# Gradle-injected build fields
+grep -rn 'BuildConfig\.API\|BuildConfig\.BASE\|BuildConfig\.SERVER' sources/
 ```
 
-## 7. Navigating Obfuscated Code
+## 9. Navigating Obfuscated Code
 
 When code is obfuscated (ProGuard/R8):
 
 ### What gets obfuscated
-- Class names → `a`, `b`, `c`
-- Method names → `a()`, `b()`, `c()`
-- Field names → `f1234a`, `f1235b`
+- Class names -> `a`, `b`, `c`
+- Method names -> `a()`, `b()`, `c()`
+- Field names -> `f1234a`, `f1235b`
 
 ### What does NOT get obfuscated
 - **String literals** — URLs, keys, error messages remain readable
 - **Android framework classes** — `Activity`, `Fragment`, `Intent` keep their names
 - **Library public APIs** — Retrofit annotations, OkHttp builders retain names
 - **AndroidManifest entries** — Activity/Service names must be real
+- **Enum values** — often preserved for serialization
+- **Annotation parameters** — `@GET("path")` keeps the path string
 
 ### Strategy for obfuscated code
 
 1. **Start from strings**: Search for URLs, error messages, and known constants
 2. **Start from framework classes**: Activities and Fragments are named in the manifest
 3. **Follow library calls**: Retrofit `@GET`/`@POST` annotations are readable even when the interface class name is obfuscated
-4. **Recover original Kotlin names from metadata**: `@DebugMetadata` and `@Metadata.d2` strings preserve the original FQNs even after R8 obfuscation. Run `scripts/recover-kotlin-names.sh` to build an `obf -> real` map (typically recovers 30-50% of classes — and almost 100% of `*Repository` / `*ViewModel` / `*Impl`). See [`kotlin-name-recovery.md`](./kotlin-name-recovery.md). This is the single highest-leverage step on any Kotlin app.
+4. **Use `--deobf`**: jadx can generate readable replacement names
 5. **Cross-reference**: If `class a` calls `Retrofit.create(b.class)`, then `b` is a Retrofit service interface
-6. **`--deobf` is rarely enough on its own**: jadx's `--deobf` renames obfuscated symbols with synthetic placeholders (`p001a`, `C0123Foo`) — useful for disambiguation but it does **not** recover original names. Pair it with the metadata recovery above.
 
-## 8. Tracing a Complete Call Flow: Example
+## 10. Tracing a Complete Call Flow: Example
 
 Goal: Find how login works in an obfuscated app.
 
 ```
-1. grep for "login" in strings → find "auth/login" URL in class `c.a.b.d`
-2. Class `c.a.b.d` has @POST("auth/login") → it's a Retrofit interface
-3. grep for `c.a.b.d` usage → class `c.a.b.f` calls it (the repository)
-4. grep for `c.a.b.f` usage → class `c.a.a.g` calls it (the ViewModel)
-5. grep for `c.a.a.g` usage → `LoginActivity` has a field of this type
-6. Read LoginActivity.onCreate() → sets click listener → calls ViewModel method
+1. grep for "login" in strings -> find "auth/login" URL in class `c.a.b.d`
+2. Class `c.a.b.d` has @POST("auth/login") -> it's a Retrofit interface
+3. grep for `c.a.b.d` usage -> class `c.a.b.f` calls it (the repository)
+4. grep for `c.a.b.f` usage -> class `c.a.a.g` calls it (the ViewModel)
+5. grep for `c.a.a.g` usage -> `LoginActivity` has a field of this type
+6. Read LoginActivity.onCreate() -> sets click listener -> calls ViewModel method
 ```
 
-Result: `LoginActivity → ViewModel → Repository → Retrofit @POST("auth/login")`
+Result: `LoginActivity -> ViewModel -> Repository -> Retrofit @POST("auth/login")`
 
-## 9. Tools and Commands Summary
+## 11. Tools and Commands Summary
 
 | Goal | Command |
 |---|---|
 | Find entry points | `grep 'android:name' resources/AndroidManifest.xml` |
 | Find lifecycle methods | `grep -rn 'onCreate\|onResume' sources/` |
 | Find click handlers | `grep -rn 'setOnClickListener\|onClick' sources/` |
-| Find DI bindings | `grep -rn '@Provides\|@Binds\|@Inject' sources/` |
+| Find Hilt/Dagger DI bindings | `grep -rn '@Provides\|@Binds\|@Inject' sources/` |
+| Find Koin DI bindings | `grep -rn 'single\s*{\|factory\s*{\|by inject' sources/` |
+| Find coroutine launches | `grep -rn 'viewModelScope\.launch\|lifecycleScope' sources/` |
+| Find Flow collection | `grep -rn '\.collect\s*{\|\.collectLatest' sources/` |
+| Find RxJava subscriptions | `grep -rn '\.subscribe\s*(\|\.subscribeOn' sources/` |
 | Find constants | `grep -rni 'BASE_URL\|API_KEY' sources/` |
 | Find usages of a class | `grep -rn 'ClassName' sources/` |
 | Follow a string | `grep -rn '"some text"' sources/` |

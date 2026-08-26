@@ -20,8 +20,10 @@ Available dependencies:
   jadx         jadx decompiler
   vineflower   Vineflower (Fernflower fork) decompiler
   dex2jar      DEX to JAR converter
+  bundletool   AAB to APK converter (for App Bundles)
   apktool      Android resource decoder
   adb          Android Debug Bridge
+  frida        Frida tools (creates venv, detects device server, matches versions)
 
 The script detects your OS and package manager, then:
   - Installs directly if possible (brew, or user-local install)
@@ -332,24 +334,24 @@ install_dex2jar() {
   # Download from GitHub (no sudo needed)
   info "Installing dex2jar from GitHub releases..."
   local tag
-  tag=$(gh_latest_tag "ThexXTURBOXx/dex2jar")
+  tag=$(gh_latest_tag "pxb1988/dex2jar")
   if [[ -z "$tag" ]]; then
-    # Fallback to a known maintained release if GitHub metadata is unavailable.
-    tag="2.4.35"
+    # Fallback: pxb1988 hasn't released in a while, try known version
+    tag="v2.4"
   fi
 
   local version="${tag#v}"
-  local url="https://github.com/ThexXTURBOXx/dex2jar/releases/download/${tag}/dex-tools-${version}.zip"
+  local url="https://github.com/pxb1988/dex2jar/releases/download/${tag}/dex-tools-${version}.zip"
   local tmp_zip
   tmp_zip=$(mktemp /tmp/dex2jar-XXXXXX.zip)
 
   info "Downloading dex2jar $version..."
   if ! download "$url" "$tmp_zip"; then
     # Try alternate naming
-    url="https://github.com/ThexXTURBOXx/dex2jar/releases/download/${tag}/dex-tools-v${version}.zip"
+    url="https://github.com/pxb1988/dex2jar/releases/download/${tag}/dex-tools-v${version}.zip"
     download "$url" "$tmp_zip" || {
       fail "Download failed."
-      manual "Download from https://github.com/ThexXTURBOXx/dex2jar/releases/latest"
+      manual "Download from https://github.com/pxb1988/dex2jar/releases/latest"
     }
   fi
 
@@ -369,7 +371,7 @@ install_dex2jar() {
 
   if [[ -z "$bin_dir" ]]; then
     fail "Could not find d2j-dex2jar.sh in extracted archive."
-    manual "Download and extract manually from https://github.com/ThexXTURBOXx/dex2jar/releases"
+    manual "Download and extract manually from https://github.com/pxb1988/dex2jar/releases"
   fi
 
   chmod +x "$bin_dir"/*.sh 2>/dev/null || true
@@ -385,6 +387,64 @@ install_dex2jar() {
   add_to_profile 'export PATH="$HOME/.local/bin:$PATH"'
 
   ok "dex2jar $version installed to $install_dir"
+}
+
+install_bundletool() {
+  if command -v bundletool &>/dev/null; then
+    ok "bundletool already installed"
+    return 0
+  fi
+  for candidate in \
+    "${BUNDLETOOL_JAR_PATH:-}" \
+    "$HOME/.local/share/bundletool/bundletool.jar" \
+    "$HOME/bundletool/bundletool.jar"; do
+    if [[ -n "$candidate" ]] && [[ -f "$candidate" ]]; then
+      ok "bundletool JAR already exists: $candidate"
+      return 0
+    fi
+  done
+
+  # Try brew
+  if [[ "$PKG_MANAGER" == "brew" ]]; then
+    info "Installing bundletool via Homebrew..."
+    if brew install bundletool 2>/dev/null; then
+      ok "bundletool installed via Homebrew"
+      return 0
+    fi
+    info "Homebrew formula not available, falling back to direct download."
+  fi
+
+  # Download JAR from GitHub releases (no sudo needed)
+  info "Installing bundletool from GitHub releases..."
+  local tag
+  tag=$(gh_latest_tag "google/bundletool")
+  if [[ -z "$tag" ]]; then
+    fail "Could not determine latest bundletool version."
+    manual "Download from https://github.com/google/bundletool/releases/latest"
+  fi
+
+  local version="${tag#v}"
+  local url="https://github.com/google/bundletool/releases/download/${tag}/bundletool-all-${version}.jar"
+  local install_dir="$HOME/.local/share/bundletool"
+  mkdir -p "$install_dir"
+
+  info "Downloading bundletool $version..."
+  download "$url" "$install_dir/bundletool.jar"
+
+  # Create wrapper script
+  mkdir -p "$HOME/.local/bin"
+  cat > "$HOME/.local/bin/bundletool" <<'WRAPPER'
+#!/usr/bin/env bash
+exec java -jar "$HOME/.local/share/bundletool/bundletool.jar" "$@"
+WRAPPER
+  chmod +x "$HOME/.local/bin/bundletool"
+
+  export PATH="$HOME/.local/bin:$PATH"
+  export BUNDLETOOL_JAR_PATH="$install_dir/bundletool.jar"
+  add_to_profile 'export PATH="$HOME/.local/bin:$PATH"'
+  add_to_profile "export BUNDLETOOL_JAR_PATH=\"$install_dir/bundletool.jar\""
+
+  ok "bundletool $version installed to $install_dir/bundletool.jar"
 }
 
 install_apktool() {
@@ -433,16 +493,33 @@ install_adb() {
 # Dispatch
 # =====================================================================
 
+install_frida() {
+  # Frida setup is handled by the dedicated setup-frida.sh script
+  # which handles: venv creation, version matching, device detection
+  local setup_script
+  setup_script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/setup-frida.sh"
+
+  if [[ ! -f "$setup_script" ]]; then
+    fail "setup-frida.sh not found at $setup_script"
+    exit 1
+  fi
+
+  info "Delegating to setup-frida.sh (handles venv, version matching, device detection)..."
+  bash "$setup_script" "$@"
+}
+
 case "$DEP" in
   java)        install_java ;;
   jadx)        install_jadx ;;
   vineflower|fernflower)  install_vineflower ;;
   dex2jar)     install_dex2jar ;;
+  bundletool)  install_bundletool ;;
   apktool)     install_apktool ;;
   adb)         install_adb ;;
+  frida)       install_frida ;;
   *)
     echo "Error: Unknown dependency '$DEP'" >&2
-    echo "Available: java, jadx, vineflower, dex2jar, apktool, adb" >&2
+    echo "Available: java, jadx, vineflower, dex2jar, bundletool, apktool, adb, frida" >&2
     exit 1
     ;;
 esac

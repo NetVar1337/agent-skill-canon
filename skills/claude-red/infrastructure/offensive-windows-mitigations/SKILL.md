@@ -1,6 +1,6 @@
 ---
-name: offensive-windows-mitigations
-description: Analyze Windows exploit mitigations, their enforcement points, observability, limitations, and bypass research strategies.
+name: claude-red-infrastructure-offensive-windows-mitigations
+description: "Deep-dive on Windows exploit mitigations: ASLR, DEP/NX, CFG, CET/Shadow Stack, SEHOP, Heap Guard, ACG, Arbitrary Code Guard. Covers both the protection mechanism and known bypass techniques. Use when researching Windows exploit mitigations, planning bypass strategies, or understanding protection depth."
 ---
 
 # SKILL: Week 6: Understanding Windows Mitigations
@@ -17,7 +17,7 @@ Deep-dive on Windows exploit mitigations: ASLR, DEP/NX, CFG, CET/Shadow Stack, S
 Use this skill when the conversation involves any of:
 `Windows mitigations, ASLR, DEP, NX, CFG, CET, shadow stack, SEHOP, heap guard, ACG, mitigation bypass, exploit mitigation, Windows hardening`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist

@@ -1,6 +1,6 @@
 ---
-name: offensive-idor
-description: Test applications and APIs for insecure direct object references and broken object-level authorization.
+name: claude-red-web-offensive-idor
+description: "IDOR (Insecure Direct Object Reference) testing checklist: object ID enumeration, horizontal/vertical privilege escalation, GUID predictability, indirect references via hashes, chained IDOR, and API endpoint IDOR. Use for web app pentests and bug bounty IDOR discovery."
 ---
 
 # SKILL: Insecure Direct Object References (IDOR)
@@ -17,7 +17,7 @@ IDOR (Insecure Direct Object Reference) testing checklist: object ID enumeration
 Use this skill when the conversation involves any of:
 `IDOR, insecure direct object reference, horizontal privilege escalation, vertical privilege escalation, object enumeration, GUID, API IDOR, mass assignment, broken access control`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist

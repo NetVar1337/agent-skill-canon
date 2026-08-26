@@ -1,6 +1,6 @@
 ---
-name: offensive-waf-bypass
-description: Analyze web application firewall behavior and test normalization, encoding, parsing, protocol, and payload-shaping bypasses.
+name: claude-red-web-offensive-waf-bypass
+description: "WAF bypass techniques checklist: encoding bypass (URL/HTML/Unicode/double encoding), case variation, comment injection, HTTP header manipulation, chunked encoding, IP rotation, timing attacks, and payload obfuscation per WAF vendor. Use when WAF is blocking payloads during web app tests."
 ---
 
 # SKILL: WAF Bypass Techniques
@@ -17,7 +17,7 @@ WAF bypass techniques checklist: encoding bypass (URL/HTML/Unicode/double encodi
 Use this skill when the conversation involves any of:
 `WAF bypass, web application firewall bypass, URL encoding, double encoding, Unicode bypass, comment injection, HTTP header bypass, chunked encoding, IP rotation, payload obfuscation, WAF evasion`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist

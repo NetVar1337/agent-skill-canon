@@ -1,6 +1,6 @@
 ---
-name: offensive-race-condition
-description: Find and exploit web and API race conditions involving state transitions, limits, authorization, and concurrent requests.
+name: claude-red-web-offensive-race-condition
+description: "Race condition (TOCTOU) testing checklist: identifying timing windows, Burp Suite Turbo Intruder, Last-Byte sync technique, rate limit bypass, double-spend attacks, and concurrent request exploitation. Use for web app race condition testing or bug bounty time-of-check-to-time-of-use bugs."
 ---
 
 # SKILL: Race Conditions
@@ -17,7 +17,7 @@ Race condition (TOCTOU) testing checklist: identifying timing windows, Burp Suit
 Use this skill when the conversation involves any of:
 `race condition, TOCTOU, timing attack, Turbo Intruder, last-byte sync, rate limit bypass, double spend, concurrent request, race window, time of check, time of use`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist

@@ -55,65 +55,6 @@ grep -rn 'Interceptor\|addInterceptor\|addNetworkInterceptor\|intercept(' source
 grep -rn '\.execute()\|\.enqueue(' sources/
 ```
 
-## Ktor (Kotlin)
-
-Ktor is the dominant HTTP client in Kotlin Multiplatform and modern
-Kotlin-only Android apps. Unlike Retrofit, Ktor does **not** use annotations
-to declare endpoints — paths appear as plain string arguments to
-`client.get(...)` / `client.post(...)`, often inside an extension function.
-
-```bash
-# Calls
-grep -rn '\b\(client\|httpClient\|HttpClient\)\.\(get\|post\|put\|delete\|patch\|head\|request\)\s*[<(]' sources/
-
-# Default request / base URL configuration
-grep -rn 'HttpRequestBuilder\|defaultRequest\s*{\|\burl\s*(\s*"\|URLBuilder' sources/
-
-# Auth plugin (bearer / refresh)
-grep -rn '\bbearer\s*{\|BearerTokens\s*(\|loadTokens\s*{\|refreshTokens\s*{' sources/
-```
-
-Typical Ktor call (after decompile):
-
-```java
-client.get("api/v1/users/profile") {
-    parameter("locale", "en-US");
-}
-```
-
-The base URL is usually applied via `defaultRequest { url { host = "..." } }`
-in the client builder. Search for `host =` and `URLProtocol.HTTPS` references
-to pin it down.
-
-**Note on obfuscation:** in heavily R8-shrunk apps the call site
-`client.get("path")` is inlined to something like `aVar.a(dVar, "path")`
-and the `client.<verb>(` regex misses it. The path string itself is **not**
-obfuscated, however — fall back to the generic path-literal search
-(`--paths`) for the endpoint inventory in those cases. Ktor library
-internals (`BearerTokens`, `loadTokens`, `refreshTokens`, `URLProtocol`)
-remain searchable because Ktor keeps these on its public API.
-
-Ktor's authentication plugin uses the
-[`Auth { bearer { loadTokens { ... }; refreshTokens { ... } } }`](https://ktor.io/docs/auth.html)
-DSL — bearer access tokens with automatic refresh. After R8, the DSL
-lambdas appear as `Function2`/`Function3` impls referencing
-`BearerTokens(...)` calls.
-
-## Apollo Kotlin (GraphQL)
-
-```bash
-# Client setup
-grep -rn 'ApolloClient\|\.serverUrl(\|HttpNetworkTransport' sources/
-
-# Operations (queries / mutations / subscriptions)
-grep -rn '\.query(\s*[A-Z]\|\.mutation(\s*[A-Z]\|\.subscription(\s*[A-Z]' sources/
-```
-
-Apollo generates one class per operation under a generated package; once you
-find the GraphQL endpoint URL via `ApolloClient.serverUrl("...")`, use the
-operation classes themselves as the API documentation — each carries its
-GraphQL document text in `OPERATION_DOCUMENT`.
-
 ## Volley
 
 ```bash
@@ -121,6 +62,153 @@ grep -rn 'StringRequest\|JsonObjectRequest\|JsonArrayRequest\|Volley\.newRequest
 ```
 
 Volley requests typically pass the URL as a constructor argument and override `getHeaders()` or `getParams()` for custom headers/parameters.
+
+## Kotlin Coroutines & Flow
+
+Modern Android apps use Kotlin coroutines for async network calls. Retrofit interfaces return `suspend` functions, and repositories expose `Flow`.
+
+### Coroutines
+
+```bash
+# Suspend functions (async entry points)
+grep -rn 'suspend\s\+fun' sources/
+
+# Coroutine context/dispatchers
+grep -rn 'withContext\|Dispatchers\.IO\|Dispatchers\.Main\|Dispatchers\.Default' sources/
+
+# Await calls (Deferred → result)
+grep -rn '\.await()' sources/
+
+# Coroutine scope/launch
+grep -rn 'viewModelScope\|lifecycleScope\|CoroutineScope\|launch\s*{' sources/
+```
+
+### Flow
+
+```bash
+# Flow types
+grep -rn 'Flow<\|StateFlow<\|SharedFlow<\|MutableStateFlow\|MutableSharedFlow' sources/
+
+# Flow collection
+grep -rn '\.collect\s*{\|\.collectLatest\|\.stateIn\|\.shareIn' sources/
+
+# Flow builders
+grep -rn 'flowOf\|channelFlow\|callbackFlow\|flow\s*{' sources/
+
+# Channel (used for one-shot events)
+grep -rn 'Channel<\|\.send(\|\.receive(\|\.consumeEach' sources/
+```
+
+### Typical Kotlin Retrofit + Coroutines interface
+
+```kotlin
+interface ApiService {
+    @GET("users/{id}")
+    suspend fun getUser(@Path("id") userId: String): User
+
+    @POST("auth/login")
+    suspend fun login(@Body request: LoginRequest): LoginResponse
+}
+
+// Repository using Flow
+class UserRepository(private val api: ApiService) {
+    fun getUser(id: String): Flow<User> = flow {
+        emit(api.getUser(id))
+    }
+}
+```
+
+## RxJava / RxKotlin
+
+Many apps use RxJava for reactive network calls, especially older codebases.
+
+```bash
+# Observable types
+grep -rn 'Observable<\|Single<\|Completable\|Maybe<\|Flowable<' sources/
+
+# Subscription
+grep -rn '\.subscribe\s*(\|\.subscribeOn\|\.observeOn\|CompositeDisposable\|DisposableObserver' sources/
+
+# Common operators (network-related)
+grep -rn '\.flatMap\s*(\|\.map\s*(\|\.switchMap\|\.concatMap\|\.zip(\|\.merge(' sources/
+
+# Retry logic
+grep -rn '\.retry(\|\.retryWhen' sources/
+
+# Schedulers
+grep -rn 'Schedulers\.io\|Schedulers\.computation\|AndroidSchedulers\.mainThread' sources/
+```
+
+### Typical RxJava Retrofit interface
+
+```java
+public interface ApiService {
+    @GET("users/{id}")
+    Single<User> getUser(@Path("id") String userId);
+
+    @POST("auth/login")
+    Observable<LoginResponse> login(@Body LoginRequest request);
+}
+```
+
+## LiveData
+
+```bash
+# LiveData types
+grep -rn 'LiveData<\|MutableLiveData<\|MediatorLiveData<' sources/
+
+# Observation
+grep -rn '\.observe\s*(\|\.postValue\|\.setValue' sources/
+
+# Transformations
+grep -rn 'Transformations\.map\|Transformations\.switchMap' sources/
+```
+
+## GraphQL
+
+Apps using GraphQL (often via Apollo) define queries and mutations instead of REST endpoints.
+
+```bash
+# Apollo Client
+grep -rn 'ApolloClient\|ApolloCall\|\.query(\|\.mutate(' sources/
+
+# GraphQL operations
+grep -rn 'query\s*{\|mutation\s*{\|subscription\s*{' sources/
+
+# GraphQL endpoint configuration
+grep -rni 'graphql[_-]\?url\|graphql[_-]\?endpoint' sources/
+
+# Operation names
+grep -rn 'operationName' sources/
+```
+
+### Typical Apollo usage
+
+```kotlin
+val apolloClient = ApolloClient.Builder()
+    .serverUrl("https://api.example.com/graphql")
+    .build()
+
+val response = apolloClient.query(GetUserQuery(id = "123")).execute()
+```
+
+## WebSocket
+
+Real-time features use WebSocket connections.
+
+```bash
+# OkHttp WebSocket
+grep -rn 'WebSocket\|WebSocketListener\|newWebSocket\s*(' sources/
+
+# WebSocket URLs
+grep -rn 'wss\?://[^"]*"' sources/
+
+# Socket.IO
+grep -rn 'io\.socket\|Socket\.IO' sources/
+
+# Scarlet (type-safe WebSocket client)
+grep -rn 'Scarlet\|@Receive\|@Send\|MessageAdapter\|StreamAdapter' sources/
+```
 
 ## HttpURLConnection (legacy)
 
@@ -136,25 +224,6 @@ grep -rn 'loadUrl\|evaluateJavascript\|addJavascriptInterface\|WebViewClient\|sh
 
 WebView-based apps may load API endpoints via JavaScript bridges. Look for `@JavascriptInterface` annotated methods.
 
-## Endpoint-Shaped Path Literals (obfuscation-resistant)
-
-When the HTTP client cannot be identified (custom abstraction, heavy
-inlining, KMP shared module), or the call sites are obfuscated to
-`a.b(c, "path")`, fall back to extracting the path string literals
-themselves. R8 does not obfuscate string contents, so paths leak through.
-
-```bash
-# All quoted strings shaped like an API path, deduplicated
-grep -rhoE '"(/[A-Za-z0-9_{}.\-]+(/[A-Za-z0-9_{}.\-]+)+/?|(api|v[0-9]+|graphql|users?|account|auth|sso|oauth|profile|cart|basket|order|product|inventory|search|category|address|location|delivery|payment|invoice|favo[u]?rites?)(/[A-Za-z0-9_{}.\-]+)+/?)"' sources/ \
-    | grep -Ev '^"(image|video|audio|text|application|content)/|^"/(proc|sys|dev|tmp|etc)/' \
-    | sort -u
-```
-
-The skill ships this as `find-api-calls.sh --paths`, which prints both a
-deduplicated inventory and the full list of call sites. On real-world
-Kotlin apps this single command typically produces 100–300 distinct
-endpoint paths, which is the most useful first artifact for documentation.
-
 ## Hardcoded URLs and Secrets
 
 ```bash
@@ -166,6 +235,59 @@ grep -rni 'api[_-]\?key\|api[_-]\?secret\|auth[_-]\?token\|bearer\|access[_-]\?t
 
 # Base URL constants
 grep -rni 'BASE_URL\|API_URL\|SERVER_URL\|ENDPOINT\|API_BASE' sources/
+```
+
+## Security Patterns
+
+### Certificate Pinning
+
+```bash
+# OkHttp CertificatePinner
+grep -rn 'CertificatePinner\|\.pin\s*(\|sha256/' sources/
+
+# Custom TrustManager
+grep -rn 'TrustManager\|X509TrustManager\|SSLContext\|TrustManagerFactory' sources/
+
+# HostnameVerifier
+grep -rn 'HostnameVerifier\|ALLOW_ALL_HOSTNAME_VERIFIER' sources/
+
+# Network Security Config (referenced in AndroidManifest)
+grep -rn 'network_security_config\|NetworkSecurityConfig' sources/ resources/
+```
+
+### Disabled Security (red flags)
+
+```bash
+# Dangerous: trust all certificates
+grep -rn 'checkClientTrusted\|checkServerTrusted\|getAcceptedIssuers\|trustAllCerts\|trustAll\|disableSSL' sources/
+
+# Dangerous: disabled hostname verification
+grep -rn 'ALLOW_ALL\|verify.*return\s\+true\|setHostnameVerifier' sources/
+```
+
+### Exposed Secrets
+
+```bash
+# Hardcoded passwords and keys
+grep -rni 'password\s*=\s*"\|secret\s*=\s*"\|private[_-]\?key\|ENCRYPTION[_-]\?KEY' sources/
+
+# Third-party API keys
+grep -rni 'firebase[_-]\?key\|aws[_-]\?key\|google[_-]\?api\|maps[_-]\?key\|STRIPE[_-]\?KEY\|SENDGRID\|TWILIO\|PAYPAL' sources/
+```
+
+### Crypto Usage
+
+```bash
+# Cipher and encryption
+grep -rn 'Cipher\.getInstance\|SecretKeySpec\|KeyGenerator\|MessageDigest' sources/
+grep -rn '\.encrypt(\|\.decrypt(\|AES\|RSA\|PBKDF2\|SHA-256\|MD5' sources/
+```
+
+### Debug & Development Flags
+
+```bash
+grep -rni 'BuildConfig\.DEBUG\|isDebuggable\|android:debuggable\|StrictMode' sources/
+grep -rni 'DEBUG_MODE\|STAGING\|DEV_MODE\|enableLogging' sources/
 ```
 
 ## Documentation Template
@@ -185,6 +307,7 @@ For each discovered API endpoint, document it using this template:
   - `Content-Type: application/json`
 - **Request body**: `LoginRequest { email: String, password: String }`
 - **Response type**: `ApiResponse<User>`
+- **Async pattern**: suspend / Single / Observable / Flow
 - **Notes**: Called from `LoginActivity.onLoginClicked()`
 ```
 
@@ -195,3 +318,6 @@ For each discovered API endpoint, document it using this template:
 3. Check **interceptors** — they reveal auth schemes and common headers
 4. Search for **hardcoded URLs** — catch any one-off API calls outside the main client
 5. Look for **WebView URLs** — some apps use hybrid web/native approaches
+6. Search for **GraphQL operations** — catch apps using Apollo or similar
+7. Check **WebSocket connections** — find real-time communication endpoints
+8. Run **security patterns** — identify cert pinning, disabled security, and exposed secrets

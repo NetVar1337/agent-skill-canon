@@ -1,6 +1,6 @@
 ---
-name: offensive-fast-checking
-description: Run a rapid, prioritized security-testing checklist to identify likely weaknesses and guide deeper investigation.
+name: claude-red-utility-offensive-fast-checking
+description: "Speed-optimized offensive checklist for rapid assessment: quick-win vulnerability patterns, fast recon shortcuts, automated scanner configurations, and triage shortcuts. Use for time-boxed assessments, CTF-speed engagements, or initial rapid surface mapping."
 ---
 
 # SKILL: Fast Testing Checklist
@@ -17,7 +17,7 @@ Speed-optimized offensive checklist for rapid assessment: quick-win vulnerabilit
 Use this skill when the conversation involves any of:
 `fast check, quick recon, rapid assessment, quick wins, fast triage, speed checklist, time-boxed, CTF, fast scan, quick vulnerability`
 
-## Instructions for Codex
+## Instructions for Claude
 
 When this skill is active:
 1. Load and apply the full methodology below as your operational checklist
