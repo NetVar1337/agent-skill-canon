@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# JavaScript / TypeScript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Security-research artifacts
+*.pcap
+*.pcapng
+*.dmp
+*.dump
+*.core
+*.idb
+*.i64
+*.nam
+*.til
+*.sig
+*.log
+work/
+artifacts/
+reports/private/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+research-profiles.json

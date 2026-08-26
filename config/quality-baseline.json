@@ -1,0 +1,10 @@
+{
+  "maximums": {
+    "broken_links": 141,
+    "duplicate_name_entries": 83,
+    "duplicate_name_groups": 83,
+    "generated_artifacts": 0,
+    "low_quality_skills": 263
+  },
+  "schemaVersion": 1
+}

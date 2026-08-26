@@ -1,0 +1,32 @@
+name: Canon quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canon-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate skill canon
+        run: python tools/canon.py validate --baseline config/quality-baseline.json
+      - name: Verify generated catalog
+        run: python tools/canon.py catalog --check
+      - name: Test canon tooling
+        run: python -m unittest discover -s tests -v
+      - name: Reject whitespace errors
+        run: git diff --check

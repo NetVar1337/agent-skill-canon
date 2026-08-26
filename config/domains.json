@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "domains": [
+    {
+      "id": "reverse-engineering",
+      "title": "Reverse Engineering",
+      "summary": "Native, managed, mobile, script, protocol, packer, decompiler, debugger, and binary-diff workflows.",
+      "primary": ["reverse-skill-router", "core-reverse-engineering", "ida-reverse", "radare2", "ghidra-reverse"],
+      "patterns": ["reverse", "decompil", "disassembl", "radare", "r2xsql", "ida-", "ghidra", "x64dbg", "binary-diff", "packer", "deobf", "debugger", "frida", "dwarf", "symbolic-execution", "protocol-analysis"]
+    },
+    {
+      "id": "game-security",
+      "title": "Game Hacking and Anti-Cheat",
+      "summary": "Game internals, cheats, overlays, aim systems, offset recovery, anti-cheat telemetry, kernel and hypervisor research.",
+      "primary": ["game-hacking", "game-hacking-exploits", "game-internals", "anti-cheat-bypass", "ac-bypass-source-index"],
+      "patterns": ["game", "aimbot", "triggerbot", "anti-cheat", "eac-", "valthrun", "offset-dumper", "imgui-overlay", "hwid", "manual-map", "stealth-inject", "stack-walk-stealth", "dma-attack"]
+    },
+    {
+      "id": "windows-internals",
+      "title": "Windows Internals and Kernel",
+      "summary": "Windows objects, tokens, services, kernel drivers, callbacks, symbols, debugging, boot trust, VBS/HVCI, and security boundaries.",
+      "primary": ["windows-internals", "kernel-dev", "windows-driver-0day", "windows-0day-hunting", "windbg-ttd"],
+      "patterns": ["windows", "win32", "kernel-dev", "driver-", "windbg", "wdk", "byovd", "callback", "dpapi", "lsass", "ntlm", "secure-boot", "uefi", "vbs-hvci", "object-manager", "profile-hive"]
+    },
+    {
+      "id": "exploit-development",
+      "title": "Exploit Development and Vulnerability Research",
+      "summary": "Memory corruption, ROP, heap exploitation, fuzzing, crash triage, patch diffing, 0-day hunting, and exploit reliability.",
+      "primary": ["exploit-dev", "pwn-chain", "vuln-research", "patch-diff-exploit", "memory-safety-analyst"],
+      "patterns": ["exploit", "pwn", "overflow", "use-after-free", "format-string", "rop", "shellcode", "fuzz", "crash", "vuln", "zero-day", "0day", "patch-diff", "race-condition", "toctou", "integer-overflow", "heap-"]
+    },
+    {
+      "id": "penetration-testing",
+      "title": "Penetration Testing and Red Team",
+      "summary": "Reconnaissance, service testing, attack-chain orchestration, lateral movement, privilege escalation, C2, and reporting.",
+      "primary": ["pentest-tools", "red-team-assessment", "attack-chain", "recon-full", "web-pentest"],
+      "patterns": ["pentest", "red-team", "recon", "portscan", "nmap", "nuclei", "ffuf", "fscan", "lateral", "privesc", "post-exploit", "c2-", "sliver", "cobalt", "mythic", "metasploit", "network-attack", "service", "tunneling", "pivot"]
+    },
+    {
+      "id": "web-api-security",
+      "title": "Web and API Security",
+      "summary": "Web applications, APIs, authentication, injection, browser trust boundaries, business logic, and protocol desynchronization.",
+      "primary": ["web-pentest", "api-security", "src-hunter", "hack", "web-vuln-scan"],
+      "patterns": ["web", "api-", "graphql", "jwt", "oauth", "saml", "sqli", "sql-injection", "xss", "ssrf", "ssti", "xxe", "csrf", "cors", "idor", "upload", "request-smug", "host-header", "prototype-pollution", "deserial", "business-logic", "cookie"]
+    },
+    {
+      "id": "cloud-containers",
+      "title": "Cloud, Containers, and Supply Chain",
+      "summary": "AWS, Azure, GCP, IAM, metadata, Kubernetes, containers, CI/CD, serverless, registries, and software supply chain.",
+      "primary": ["cloud-k8s", "offensive-cloud", "k8s-container-escape", "supply-chain-security", "cicd-supply-chain"],
+      "patterns": ["cloud", "aws", "azure", "gcp", "aliyun", "tencent", "huawei", "iam", "metadata", "k8s", "kubernetes", "container", "docker", "serverless", "supply-chain", "cicd", "terraform", "argocd", "harbor", "portainer"]
+    },
+    {
+      "id": "identity-ad",
+      "title": "Identity, Active Directory, and Federation",
+      "summary": "Active Directory, Kerberos, AD CS, LDAP, Entra ID, OAuth/OIDC, SAML, credential access, and identity pivots.",
+      "primary": ["windows-ad", "active-directory-attack", "adcs-certipy-attack", "identity-federation", "offensive-jwt"],
+      "patterns": ["active-directory", "ad-", "adcs", "kerberos", "ldap", "entra", "identity", "federation", "oauth", "oidc", "saml", "credential", "bloodhound", "certipy", "dcsync"]
+    },
+    {
+      "id": "malware-forensics",
+      "title": "Malware, Forensics, and Detection",
+      "summary": "Malware triage and reverse engineering, memory and disk forensics, PCAP analysis, IOC extraction, YARA/Sigma, and threat hunting.",
+      "primary": ["malware-analysis-lifecycle", "digital-forensics", "memory-forensics", "threat-hunting", "yara-rule-authoring"],
+      "patterns": ["malware", "forensic", "ioc", "yara", "sigma", "threat-hunt", "incident-response", "pcap", "traffic-analysis", "cobalt-strike-beacon", "rootkit", "bootkit", "ransomware", "cape", "cuckoo"]
+    },
+    {
+      "id": "mobile",
+      "title": "Mobile Security",
+      "summary": "Android and iOS reverse engineering, application testing, runtime instrumentation, platform research, and mobile backends.",
+      "primary": ["mobile-reverse", "apk-reverse", "android-reverse-engineering", "mobile-pentest", "ios-pentesting"],
+      "patterns": ["android", "apk", "ios", "ipa", "mobile", "frida.*ios", "deeplink", "ssl-pinning"]
+    },
+    {
+      "id": "firmware-hardware-ot",
+      "title": "Firmware, Hardware, OT, and Radio",
+      "summary": "Firmware extraction, embedded systems, bare-metal development, hardware interfaces, PLC/ICS, SDR, and non-IP protocols.",
+      "primary": ["firmware-pentest", "hardware-security", "ot-ics", "radio-sdr", "firmware-analysis"],
+      "patterns": ["firmware", "baremetal", "embedded", "gpio", "uart", "spi", "i2c", "jtag", "plc", "ics", "ot-", "radio", "sdr", "wifi", "bluetooth", "zigbee", "z-wave", "lorawan"]
+    },
+    {
+      "id": "ai-agent-security",
+      "title": "AI and Agent Security",
+      "summary": "LLM red teaming, prompt injection, jailbreak research, MCP and tool abuse, model infrastructure, and agent trust boundaries.",
+      "primary": ["llm-security", "ai-agent-redteam", "llm-jailbreak-taxonomy", "mcp-security", "agent-security"],
+      "patterns": ["llm", "prompt", "jailbreak", "agent-security", "ai-security", "ai-agent", "ai-data", "ai-identity", "mcp", "machine.learning", "language.model", "model-security", "model-extraction", "rag", "fable"]
+    },
+    {
+      "id": "crypto-web3",
+      "title": "Cryptography and Web3",
+      "summary": "Cryptographic implementation review, classical and modern attacks, side channels, smart contracts, DeFi, and blockchain systems.",
+      "primary": ["crypto-analysis", "constant-time-analysis", "web3-security", "smart-contract-vulnerabilities", "ctf-crypto"],
+      "patterns": ["crypto", "cipher", "rsa", "lattice", "hash-", "constant-time", "zeroize", "web3", "smart-contract", "defi", "blockchain"]
+    },
+    {
+      "id": "systems-engineering",
+      "title": "Systems and Toolchain Engineering",
+      "summary": "C/C++, Rust, Go, Zig, assembly, compilers, build systems, kernels, virtualization, performance, and developer tooling.",
+      "primary": ["systems-language-engineering", "lang-cpp23", "lang-rust", "lang-go", "lang-zig"],
+      "patterns": ["low-level-dev", "lang-", "compiler", "assembly", "rust", "cpp", "cmake", "cargo", "zig", "llvm", "gcc", "clang", "qemu", "hypervisor", "ebpf", "cuda", "profil", "debugging", "build-"]
+    },
+    {
+      "id": "general",
+      "title": "General Agent Engineering",
+      "summary": "Cross-domain execution, documentation, review, orchestration, repository operations, and skills that do not belong to one technical specialty.",
+      "primary": ["operator-execution", "karpathy-guidelines", "skill-curator", "completion-receipt", "docs-generator"],
+      "patterns": ["(?!)"]
+    }
+  ]
+}
