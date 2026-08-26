@@ -115,10 +115,18 @@ def quality_score(meta: dict[str, str], body: str, path: Path) -> int:
     return min(score, 100)
 
 
+def skill_paths() -> list[Path]:
+    """Return skill files with stable case-insensitive discovery on every OS."""
+    return sorted(
+        (path for path in SKILLS.rglob("*") if path.is_file() and path.name.lower() == "skill.md"),
+        key=lambda path: (path.as_posix().lower(), path.as_posix()),
+    )
+
+
 def discover() -> list[Skill]:
     domains = load_domains()
     result: list[Skill] = []
-    for path in sorted(SKILLS.rglob("SKILL.md"), key=lambda p: p.as_posix().lower()):
+    for path in skill_paths():
         meta, body = parse_frontmatter(path)
         rel = path.relative_to(ROOT).as_posix()
         name = meta.get("name", "").strip()
@@ -169,7 +177,7 @@ def audit() -> tuple[list[str], list[str], dict[str, int]]:
     metrics: Counter[str] = Counter()
     names: defaultdict[str, list[str]] = defaultdict(list)
 
-    paths = sorted(SKILLS.rglob("SKILL.md"), key=lambda p: p.as_posix().lower())
+    paths = skill_paths()
     metrics["skill_files"] = len(paths)
     for path in paths:
         rel = path.relative_to(ROOT).as_posix()

@@ -100,7 +100,7 @@ These are prioritization leads, not automatic defect findings. Scores reward tri
 | 40 | `format-string-bug` | [`skills/format-string-bug/SKILL.md`](../skills/format-string-bug/SKILL.md) |
 | 40 | `frida-dbi` | [`skills/frida-dbi/SKILL.md`](../skills/frida-dbi/SKILL.md) |
 | 40 | `functions` | [`skills/functions/SKILL.md`](../skills/functions/SKILL.md) |
-| 40 | `graphify` | [`skills/graphify/SKILL.md`](../skills/graphify/SKILL.md) |
+| 40 | `graphify` | [`skills/graphify/skill.md`](../skills/graphify/skill.md) |
 | 40 | `hardware-firmware-validation` | [`skills/hardware-firmware-validation/SKILL.md`](../skills/hardware-firmware-validation/SKILL.md) |
 | 40 | `hwid-identifier-surfaces` | [`skills/hwid-identifier-surfaces/SKILL.md`](../skills/hwid-identifier-surfaces/SKILL.md) |
 | 40 | `imgui-overlay` | [`skills/imgui-overlay/SKILL.md`](../skills/imgui-overlay/SKILL.md) |

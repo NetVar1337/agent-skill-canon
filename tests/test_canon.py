@@ -48,6 +48,16 @@ class FrontmatterTests(unittest.TestCase):
         canon.ROOT = path.parent
         self.assertEqual(canon.broken_links(path, body), ["references/missing.md"])
 
+    def test_discovers_lowercase_skill_filename(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        root = Path(directory.name)
+        (root / "skill.md").write_text("---\nname: lower\ndescription: Use when testing.\n---\n", encoding="utf-8")
+        old_skills = canon.SKILLS
+        self.addCleanup(setattr, canon, "SKILLS", old_skills)
+        canon.SKILLS = root
+        self.assertEqual([path.name for path in canon.skill_paths()], ["skill.md"])
+
     def test_classifies_across_multiple_domains(self) -> None:
         domains = [
             {"id": "game", "patterns": ["game"]},
