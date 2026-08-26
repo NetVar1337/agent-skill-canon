@@ -1,6 +1,6 @@
-# SDR 实验室规则
+# SDR Lab Rules
 
-1. 默认 RX only  
-2. 发射仅屏蔽室 + 授权文号  
-3. 避开航空/应急等受保护频段  
-4. 证据不公开未脱敏的频率/地点组合（若敏感）  
+1. RX only by default  
+2. Transmit only in a shielded room + with an authorization reference number  
+3. Avoid protected bands such as aviation/emergency  
+4. Do not publish unsanitized frequency/location combinations in evidence (if sensitive)  

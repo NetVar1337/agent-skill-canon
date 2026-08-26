@@ -1,0 +1,10 @@
+{
+  "name": "ghidra-cli",
+  "repo": "akiselev/ghidra-cli",
+  "commit": "10019ba1f3b54c9edcca8ec644a30e16fb7b7c79",
+  "subpath": ".claude/skills/ghidra-cli",
+  "license": "GPL-3.0",
+  "url": "https://codeload.github.com/akiselev/ghidra-cli/zip/10019ba1f3b54c9edcca8ec644a30e16fb7b7c79",
+  "archive_sha256": "38eea4d9fd05b10c0ab58b35f44785b390abab5f357aa333f4c15bb8ecf4ad3a",
+  "installed_at_utc": "2026-08-24T18:56:28Z"
+}

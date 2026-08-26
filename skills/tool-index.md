@@ -1,73 +1,88 @@
-# tool-index — 本机逆向/安全工具索引
+# tool-index — workstation RE/security tool inventory
 
-> 2026-08-24 实测生成（probe = PATH + 标准安装位置）。技能里写 "工具路径只认 tool-index.md" 的，以此为准。
-> 用 `scripts/refresh-tool-index.sh`（见文末）重测。未列出的工具 = 未安装或不在探测路径，MUST 手动确认后回写本文件。
+> Generated 2026-08-24 from live probing (PATH + standard install locations). Any skill that says "tool paths are governed by tool-index.md" resolves against this file.
+> Re-probe with the refresh snippet at the bottom. Unlisted tools = not installed or outside probe paths; MUST confirm manually and write the result back here.
 
-## 反编译 / 反汇编 / 静态分析
+## Decompilers / disassemblers / static analysis
 
-| 工具 | 状态 | 路径 / 调用方式 |
+| Tool | Status | Path / invocation |
 |------|------|----------------|
-| IDA Professional 9.4 | ✅ | `C:\Program Files\IDA Professional 9.4\ida64.exe`；无 PATH，需全路径或自加 |
-| IDA headless (idat) | ✅ | 同目录 `idat64.exe`；idapython 见 `idapython` skill |
-| AiDAPrivate | ✅ | `C:\Users\Admin\Tools\AiDAPrivate\`（私有 IDA 助手套件） |
-| radare2 6.2.0 | ✅ | `C:\Users\Admin\Tools\radare2\bin\r2.bat`（注意：无 `r2.exe`，用 .bat） |
-| rabin2 / rasm2 / radiff2 / rafind2 | ✅ | 同目录，已在 PATH |
-| r2pm / r2agent / r2mcp | ✅ | 同目录；r2mcp MCP server 见 `r2mcp-basic` skill |
-| Ghidra | ❌ 未找到 | 需要时手动安装；无 IDA 场景的替代入口是 radare2 |
-| x64dbg | ❌ 未找到 | 未安装/未探测到；内核调试用 WinDbg（下） |
+| IDA Professional 9.4 | ✅ | `C:\Program Files\IDA Professional 9.4\ida64.exe`; not on PATH — use full path or add it |
+| IDA headless (idat) | ✅ | Same dir, `idat64.exe`; idapython flows in the `idapython` skill |
+| AiDAPrivate | ✅ | `C:\Users\Admin\Tools\AiDAPrivate\` (private IDA assistant toolkit) |
+| radare2 6.2.0 | ✅ | `C:\Users\Admin\Tools\radare2\bin\r2.bat` (note: no `r2.exe` — use the .bat) |
+| rabin2 / rasm2 / radiff2 / rafind2 | ✅ | Same dir, already on PATH |
+| r2pm / r2agent / r2mcp | ✅ | Same dir; r2mcp MCP server covered in the `r2mcp-basic` skill |
+| Ghidra 12.1.3 (×2) | ✅ | Canonical: `E:\Tools\ghidra\ghidra_12.1.3_PUBLIC\` (`ghidraRun`/`analyzeHeadless` shims on PATH via E:\Tools\bin; JAVA_HOME=E:\Tools\jdk-21\jdk-21.0.12.1+1). Legacy: `C:\Users\Admin\Tools\Ghidra\` (keeps ReVa extension) |
+| ReVa MCP 7.3.0 | ✅ | Extension: `C:\Users\Admin\Tools\Ghidra\Ghidra\Extensions\reverse-engineering-assistant\`; stdio: `C:\Users\Admin\.local\bin\mcp-reva.exe` |
+| ghidra-cli 0.2.2 | ✅ | `C:\Users\Admin\Tools\ghidra-cli\ghidra.exe`; user PATH entry configured |
+| x64dbg/x32dbg 2026.05.27 | ✅ | `E:\Tools\x64dbg\release\x{32,64}\` — `x64dbg`/`x32dbg` shims |
+| dnSpyEx 6.6.0 | ✅ | `E:\Tools\dnSpyEx\dnSpy.exe` — `dnspy` shim |
+| DIE 3.21 | ✅ | `E:\Tools\DIE\die.exe` — `die` shim |
+| PE-bear 0.7.2 | ✅ | `E:\Tools\PE-bear\` — `pebear` shim |
+| pcileech v4.19.8 | ✅ | `E:\Tools\pcileech\pcileech.exe` — `pcileech` shim |
+| Sysinternals suite (164) | ✅ | `E:\Tools\Sysinternals\` — procmon64/procexp64/autoruns64/tcpview shims |
 
-## 调试器
+## Debuggers
 
-| 工具 | 状态 | 路径 |
+| Tool | Status | Path |
 |------|------|------|
-| WinDbg classic (windbg/cdb/kd/ntsd) | ✅ | `C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\`（含 windbg.exe, cdb.exe, kd.exe, ntd.exe 系列） |
-| WinDbgX (Store 版) | ❌ | 未安装；TTD 需要 Store 版或手动装 |
-| Frida 17.17.0 | ✅ | pip 包：`python -m frida_tools.repl`；scripts 在 `C:\Users\Admin\AppData\Local\Python\bin\`（frida, frida-ps, frida-trace 未入 PATH） |
+| WinDbg classic (windbg/cdb/kd/ntsd) | ✅ | `C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\` (windbg.exe, cdb.exe, kd.exe, ntd.exe family) |
+| WinDbgX (Store) | ❌ | Not installed; TTD requires the Store version or a manual install (`winget install Microsoft.WinDbg`) |
+| Frida 17.17.0 | ✅ | pip package: `python -m frida_tools.repl`; scripts in `C:\Users\Admin\AppData\Local\Python\bin\` (frida, frida-ps, frida-trace not on PATH) |
 
-## 构建 / 编译（驱动与 exploit 开发）
+## Build / compilers (driver and exploit development)
 
-| 工具 | 状态 | 路径 |
+| Tool | Status | Path |
 |------|------|------|
-| Visual Studio 2022 Community | ✅ | `C:\Program Files\Microsoft Visual Studio\2022\Community\`（MSBuild/CL 通过 VsDevCmd 或 Developer Shell） |
-| WDK | ✅ | Windows Kits 10：`10.0.26100.0` 与 `10.0.28000.0` 两套（km 头文件均在）；驱动工程 targetversion 选择其一 |
-| MSVC 工具链 | ✅ | 同 VS 目录；无独立 PATH，走 vcvars |
-| Rust 1.98.0 | ✅ | `C:\Users\Admin\.cargo\bin\`（cargo/rustc 已在 PATH） |
+| Visual Studio 2022 Community | ✅ | `C:\Program Files\Microsoft Visual Studio\2022\Community\` (MSBuild/CL via VsDevCmd or a Developer Shell) |
+| WDK | ✅ | Windows Kits 10: two sets, `10.0.26100.0` and `10.0.28000.0` (km headers present in both); driver projects target one of them |
+| MSVC toolchain | ✅ | Same VS tree; no standalone PATH — go through vcvars |
+| Rust 1.98.0 | ✅ | `C:\Users\Admin\.cargo\bin\` (cargo/rustc on PATH) |
 | Go 1.27.0 | ✅ | `C:\Program Files\Go\bin\go.exe` |
-| Node 24.19 + bun | ✅ | PATH 已有（node/npm、`C:\Users\Admin\.bun\bin\bun`） |
-| CMake / Ninja | ✅ | CMake 在 PATH；ninja 见 `C:\Users\Admin\Tools\build-ninja\` |
-| Python 3.14.7 | ✅ | PATH（WindowsApps shim）+ `C:\Users\Admin\AppData\Local\Python\` |
+| Node 24.19 + bun | ✅ | On PATH (node/npm, `C:\Users\Admin\.bun\bin\bun`) |
+| CMake / Ninja | ✅ | CMake on PATH; ninja under `C:\Users\Admin\Tools\build-ninja\` |
+| Python 3.14.7 | ✅ | On PATH (WindowsApps shim) + `C:\Users\Admin\AppData\Local\Python\` |
 
-## Python 逆向库（pip 实测已装）
+## Python RE libraries
 
-capstone 5.0.9 · frida 17.17.0 · frida-tools 14.10.4 · pefile 2024.8.26 · requests
-（未装：pwntools, yara-python, angr, unicorn, keystone, lief, impacket —— 需要时 `pip install` 后回写此表）
+**Primary env: `E:\Tools\pyenv` (Python 3.12.14, uv-managed) — `pre` shim = E:\Tools\pyenv\Scripts\python.exe**
+pwntools · angr · capstone · unicorn · keystone-engine · yara-python · yara-x · pefile · lief · impacket · volatility3 · z3-solver · qiling · frida 17.17 · frida-tools · ropper · ROPgadget · dnfile (all import-verified 2026-08-24)
+Legacy system pip: capstone 5.0.9 · frida 17.17.0 · frida-tools 14.10.4 · pefile 2024.8.26 · requests
 
-## 移动 / Android
+## Mobile / Android
 
-| 工具 | 状态 | 路径 |
+| Tool | Status | Path |
 |------|------|------|
-| adb (platform-tools) | ✅ | winget 安装，已在 PATH |
-| jadx / apktool | ❌ 未找到 | 需要时手动装（bootstrap 指引见 router skill） |
+| adb (platform-tools) | ✅ | Installed via winget, on PATH |
+| jadx 1.5.6 / apktool 3.0.3 | ✅ | `jadx`/`jadx-gui` shims (E:\Tools\jadx); apktool at `E:\Tools\apktool\apktool.cmd` |
+| Il2CppDumper 6.7.46 | ✅ | `il2cppdumper` shim (E:\Tools\Il2CppDumper) |
+| Dumper-7 v7.0.1 | ✅ | `E:\Tools\Dumper-7\Dumper-7.dll` (UE mod) |
 
-## 本机研究工作区（非工具，供路由参考）
+## Local research workspaces (not tools — routing context)
 
-| 目录 | 内容 |
+| Dir | Contents |
 |------|------|
-| `C:\Users\Admin\Tools\eac-emu\` | EAC 驱动模拟/研究 lab |
-| `C:\Users\Admin\Tools\byovd-hunt\` | BYOVD 狩猎：HWiNFO_x64.sys 系列、PawnIO 及模块源码、XTU 安装包 |
-| `C:\Users\Admin\Tools\Bin2BinLab\` | 二进制对比实验 |
-| `C:\Users\Admin\Desktop\CVEs\ZDI-Submissions` | ZDI 提交工作区（canonical root） |
-| `C:\Users\Admin\Desktop\DriverHunt`, `VulnDrivers`, `Samples` | 驱动 0-day / 样本工作目录 |
+| `C:\Users\Admin\Tools\eac-emu\` | EAC driver emulation/research lab |
+| `C:\Users\Admin\Tools\byovd-hunt\` | BYOVD hunting: HWiNFO_x64.sys family, PawnIO + module sources, XTU installers |
+| `C:\Users\Admin\Tools\Bin2BinLab\` | Binary diffing experiments |
+| `C:\Users\Admin\Desktop\CVEs\ZDI-Submissions` | ZDI submission workspace (canonical root) |
+| `C:\Users\Admin\Desktop\DriverHunt`, `VulnDrivers`, `Samples` | Driver 0-day / sample working dirs |
+| `E:\Tools\git\momo5502` | Sogen / vmtrace / EPT-detect / momo HV (15 trees) |
+| `E:\Tools\git\aftermathlabs` | ring-1.io / Voyager / VDM / vmp2 (21 trees) |
+| `E:\Tools\git\xeroxz` | Bluepill / plouton / Mergen / qemu-anti-detect (17 trees) |
+| `E:\Tools\git\hv-baselines` | SimpleVisor / HyperDbg / hvpp / VisualUefi (7 trees) |
 
-## 明确缺失（按需补装）
+## Explicitly missing (install on demand)
 
-Wireshark/tshark、Sysinternals 套件（procmon/procexp）、nmap、nuclei、sqlmap、hashcat、yara、Django 系 fuzz 工具链、Ghidra、x64dbg。
-安装后 MUST 回写本文件对应行，并注明安装日期。
+Cheat Engine (no silent installer — manual: https://github.com/cheatengine/cheat_engine/releases), yara CLI (yara-python covers), WinDbgX/TTD, fuzzing toolchain (AFL++/honggfuzz need WSL).
+Wireshark + Nmap: winget-installed 2026-08-24 (own PATH entries). hashcat 6.2.6 `hashcat` shim. nuclei/subfinder/httpx/ffuf/sqlmap/Responder/Sliver/donut: E:\Tools shims (see E:\Tools\README.md).
+After installing, MUST write the row back here with the install date.
 
-## refresh 脚本
+## Refresh snippet
 
 ```bash
-# ~/.agents/skills/tool-index.md 维护用：快速重测 PATH 可见性
+# tool-index.md maintenance: quick PATH re-probe
 for t in ida64 r2.bat rabin2 frida adb cdb kd python node cargo go; do
   command -v $t >/dev/null 2>&1 && echo "OK  $t" || echo "MISS $t"
 done

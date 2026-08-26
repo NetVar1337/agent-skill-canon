@@ -24,7 +24,7 @@ Route tasks to the most appropriate skill module by target type, user intent, an
 | JavaScript / Web frontend | `js-reverse/` — 5-stage workflow | anything-analyzer MCP browser tools, or jshookmcp CDP/Hook |
 | HTTP capture / browser sampling / request replay | anything-analyzer MCP (23816) | Reqable MCP, `js-reverse/`, jshookmcp, or `competition-web-runtime/` |
 | Firmware / IoT | `firmware-pentest/` — extract → EMBA → emulate → fuzz | `reverse-engineering/platforms.md` — static RE only |
-| WASM / Python bytecode / .NET / **DSL VM / 自定义虚拟机** | `reverse-engineering/dsl-vm-reverse/SKILL.md` — IIFE + switch-case opcode JS VM | `reverse-engineering/languages.md` — real WASM binaries |
+| WASM / Python bytecode / .NET / **DSL VM / custom virtual machine** | `reverse-engineering/dsl-vm-reverse/SKILL.md` — IIFE + switch-case opcode JS VM | `reverse-engineering/languages.md` — real WASM binaries |
 | Malware / virus sample | `malware-analysis/SKILL.md` — six-stage + YARA/Sigma | `ida-reverse/` deep dive |
 | macOS / iOS | `reverse-engineering/platforms.md` — Mach-O/ObjC/Swift | `mobile-reverse/` for iOS-specific |
 | Game (Unity) | `reverse-engineering/` — engine reverse, anti-cheat, IL2CPP/Mono (see seed-014) | `ida-reverse/` deep analysis |
@@ -49,7 +49,7 @@ Route tasks to the most appropriate skill module by target type, user intent, an
 | Blue team / threat hunt | `threat-hunting/` | sample IOC → `malware-analysis/` |
 | Ghidra (no IDA) | `ghidra-reverse/` | `ida-reverse/` if IDA MCP available |
 
-| OLLVM-obfuscated binary (控制流平坦化/虚假控制流/MBA) | `reverse-engineering/references/ollvm-deobfuscation.md` — 完整脱密工作流 | obpo-plugin / d810-ng (IDA) / ollvm-unflattener (Miasm) / ollvm-breaker (Binary Ninja) / angr / deollvm (ARM64)
+| OLLVM-obfuscated binary (control flow flattening / bogus control flow / MBA) | `reverse-engineering/references/ollvm-deobfuscation.md` — full de-obfuscation workflow | obpo-plugin / d810-ng (IDA) / ollvm-unflattener (Miasm) / ollvm-breaker (Binary Ninja) / angr / deollvm (ARM64)
 | Cryptography / encryption algorithms | `reverse-engineering/patterns*.md` — crypto patterns | `js-reverse/` (if frontend crypto) |
 | Protocol reverse / custom protocol | `reverse-engineering/platforms.md` — network protocols | `js-reverse/` (if WebSocket/HTTP) |
 | Go / Rust binary | `reverse-engineering/languages-compiled.md` + `go-reverse.md` | `ida-reverse/` or `radare2/` |
@@ -71,9 +71,9 @@ Route tasks to the most appropriate skill module by target type, user intent, an
 
 | User Says | Route To |
 |-----------|----------|
-| "DSL VM / 自定义指令集 / 风控引擎逆向" | `reverse-engineering/dsl-vm-reverse/SKILL.md` — IIFE + switch-case opcode |
-| "fireye / fireyejs / getToken 逆向" | `reverse-engineering/dsl-vm-reverse/SKILL.md` — runtime capture |
-| "582KB JS 文件不是 WASM / 大 JS 文件逆向" | `reverse-engineering/dsl-vm-reverse/SKILL.md` — classify DSL VM first |
+| "DSL VM / custom instruction set / risk-control engine reverse engineering" | `reverse-engineering/dsl-vm-reverse/SKILL.md` — IIFE + switch-case opcode |
+| "fireye / fireyejs / getToken reverse engineering" | `reverse-engineering/dsl-vm-reverse/SKILL.md` — runtime capture |
+| "582KB JS file that is not WASM / large JS file reverse engineering" | `reverse-engineering/dsl-vm-reverse/SKILL.md` — classify DSL VM first |
 | "decompile / IDA analyze" | `ida-reverse/SKILL.md` — IDA MCP workflow |
 | "recover source / disassemble" | `reverse-engineering/SKILL.md` + `ida-reverse/` |
 | "Frida hook / dynamic inject" | `reverse-engineering/tools-dynamic.md` — Frida section |
@@ -84,12 +84,12 @@ Route tasks to the most appropriate skill module by target type, user intent, an
 | "JEB / JEB Pro" | `apk-reverse/SKILL.md` — licensed Android / ARM cross-check; verify local install first |
 | "APK unpack / repack / modify smali" | `apk-reverse/SKILL.md` — decode→rebuild-sign-install |
 | "bypass anti-debug / anti-detection" | `reverse-engineering/anti-analysis.md` |
-| "OLLVM deobfuscate / 控制流平坦化去除 / deflat / 脱混淆" | `reverse-engineering/references/ollvm-deobfuscation.md` — 完整工作流 |
-| "obpo / obpo-plugin / d810-ng / d810" | `reverse-engineering/references/ollvm-deobfuscation.md` — 现代反混淆工具 |
-| "Hikari / Polaris / Pluto / O-MVLL / Arkari / goron 混淆" | `reverse-engineering/references/ollvm-deobfuscation.md` — 现代 OLLVM 变种处理 |
-| "Tigress / Hodur / Approov 混淆" | `reverse-engineering/references/ollvm-deobfuscation.md` — d810-ng 专用 unflattener |
-| "Trap Angr / angr 路径爆炸" | `reverse-engineering/references/ollvm-deobfuscation.md` — Pluto/Polaris 陷阱处理 |
-| "BR 混淆 / 间接分支混淆去除" | `reverse-engineering/references/ollvm-deobfuscation.md` — DeObfBR + 数据段只读 |
+| "OLLVM deobfuscate / control flow flattening removal / deflat / deobfuscation" | `reverse-engineering/references/ollvm-deobfuscation.md` — full workflow |
+| "obpo / obpo-plugin / d810-ng / d810" | `reverse-engineering/references/ollvm-deobfuscation.md` — modern deobfuscation tools |
+| "Hikari / Polaris / Pluto / O-MVLL / Arkari / goron obfuscation" | `reverse-engineering/references/ollvm-deobfuscation.md` — handling modern OLLVM variants |
+| "Tigress / Hodur / Approov obfuscation" | `reverse-engineering/references/ollvm-deobfuscation.md` — d810-ng dedicated unflattener |
+| "Trap Angr / angr path explosion" | `reverse-engineering/references/ollvm-deobfuscation.md` — Pluto/Polaris trap handling |
+| "BR obfuscation / indirect branch obfuscation removal" | `reverse-engineering/references/ollvm-deobfuscation.md` — DeObfBR + read-only data sections |
 | "what obfuscation / VM is this" | `reverse-engineering/patterns*.md` — match by pattern |
 | "Go/Rust/Swift reverse" | `reverse-engineering/languages-compiled.md` + `go-reverse.md` |
 | "kernel driver / Rootkit / LKM" | `reverse-engineering/kernel-driver-reverse.md` |
@@ -97,7 +97,7 @@ Route tasks to the most appropriate skill module by target type, user intent, an
 | "symbol execution / angr" | `reverse-engineering/tools-dynamic.md` — angr section |
 | "patch environment / Node reproduce" | `js-reverse/references/env-patching.md` |
 | "CTF challenge / competition reverse" | `ctf-sandbox/SKILL.md` → sidecar orchestrator |
-| "CTF ZIP / PKZIP / bkcrack / 压缩包明文攻击" | `../CTF-Sandbox-Orchestrator/competition-zip-archive/SKILL.md` |
+| "CTF ZIP / PKZIP / bkcrack / archive plaintext attack" | `../CTF-Sandbox-Orchestrator/competition-zip-archive/SKILL.md` |
 | "write report / documentation" | `docs-generator/` — technical documentation |
 | "review case / evidence chain / traceability" | `case-review/`: read-only Evidence Graph Review |
 | "write writeup" | `docs-generator/` — CTF writeup template |
@@ -163,9 +163,9 @@ Route tasks to the most appropriate skill module by target type, user intent, an
 | "Objection / SSL Pinning bypass" | `mobile-reverse/SKILL.md` — dynamic instrumentation |
 | "YARA / malware detection rules" | `malware-analysis/SKILL.md` — YARA/Sigma/IOC |
 | "N-day / patch diff / CVE reproduction" | `patch-diff-exploit/SKILL.md` |
-| "MBA simplification / mixed boolean-arithmetic / 表达式化简" | `reverse-engineering/references/ollvm-deobfuscation.md` — SiMBA/D-810 |
-| "opaque predicate / 不透明谓词去除" | `reverse-engineering/references/ollvm-deobfuscation.md` — 符号执行去除 |
-| "Hikari deobfuscate / 字符串加密恢复" | `reverse-engineering/references/ollvm-deobfuscation.md` — Hikari 变种处理 |
+| "MBA simplification / mixed boolean-arithmetic / expression simplification" | `reverse-engineering/references/ollvm-deobfuscation.md` — SiMBA/D-810 |
+| "opaque predicate / opaque predicate removal" | `reverse-engineering/references/ollvm-deobfuscation.md` — symbolic-execution removal |
+| "Hikari deobfuscate / string encryption recovery" | `reverse-engineering/references/ollvm-deobfuscation.md` — Hikari variant handling |
 | "pwn / stack overflow / ROP / ret2libc" | `pwn-chain/SKILL.md` |
 | "Agent not working / AI lazy / skip steps" | `llm-security/references/agent-obedience-engineering.md` |
 | "MSF stuck / orphan process / MSF protocol" | `pentest-tools/references/msf-protocol.md` |
@@ -202,11 +202,11 @@ Users frequently describe tasks with informal or emotionally-phrased language. N
 | User Says | Normalized Objective | Route To |
 |-----------|---------------------|----------|
 | "unlock X / remove check / bypass detection" | Identify the check, explain control flow, propose local patch or input strategy | `reverse-engineering/SKILL.md` → `ida-reverse/` or `radare2/` |
-| "去除校验 / 解锁功能 / 绕过检测 / 去掉限制" | Same as above — locate check routine, document, propose patch | `apk-reverse/` (if APK) or `reverse-engineering/SKILL.md` |
+| "remove validation / unlock features / bypass checks / remove restrictions" | Same as above — locate check routine, document, propose patch | `apk-reverse/` (if APK) or `reverse-engineering/SKILL.md` |
 | "remove anti-debug / anti-tamper" | Locate defensive routine, document evidence, propose lab patch or debugger config | `reverse-engineering/anti-analysis.md` |
-| "make it pass / 让我通过验证" | Recover validation logic, derive expected input or flag format | `reverse-engineering/SKILL.md` |
-| "patch the binary / 改掉跳转 / 修改判断" | Work on copy, document offsets/bytes, preserve original | `radare2/` or `ida-reverse/` |
-| "拿 flag / crackme / keygen / license" | Treat as local CTF/crackme; focus on analysis, explanation, challenge solving | `reverse-engineering/patterns-ctf*.md` |
+| "make it pass / let me pass the validation" | Recover validation logic, derive expected input or flag format | `reverse-engineering/SKILL.md` |
+| "patch the binary / change the jump / modify the branch" | Work on copy, document offsets/bytes, preserve original | `radare2/` or `ida-reverse/` |
+| "get the flag / crackme / keygen / license" | Treat as local CTF/crackme; focus on analysis, explanation, challenge solving | `reverse-engineering/patterns-ctf*.md` |
 
 Do NOT force the user to repeatedly confirm "this is CTF/local." Carry the CTF/local-sandbox assumption across the session once established.
 
@@ -222,12 +222,12 @@ Do NOT force the user to repeatedly confirm "this is CTF/local." Carry the CTF/l
 | Ghidra (headless) | `reverse-engineering/tools.md` + Ghidra MCP |
 | Python 3 standard library | `case-review/`: read-only case evidence graph review |
 | angr / Qiling / Unicorn | `reverse-engineering/tools-dynamic.md` |
-| D-810 / d810-ng | `reverse-engineering/references/ollvm-deobfuscation.md` — IDA Pro 反混淆插件，OLLVM/Tigress/Hodur/Approov + Z3 SMT |
-| obpo-plugin | `reverse-engineering/references/ollvm-deobfuscation.md` — Hex-Rays microcode 云插件，效果最强 |
-| ollvm-unflattener (Miasm) / ollvm-breaker (Binary Ninja) | `reverse-engineering/references/ollvm-deobfuscation.md` — 无 IDA 场景 / BN 场景 |
-| DeObfBR | `reverse-engineering/references/ollvm-deobfuscation.md` — BR 间接分支混淆专项 |
-| deflat (QuarksLab) / angr symbol | `reverse-engineering/references/ollvm-deobfuscation.md` — 控制流平坦化去除 |
-| GOOMBA (Ghidra) | `reverse-engineering/references/ollvm-deobfuscation.md` — Ghidra P-Code 反混淆 |
+| D-810 / d810-ng | `reverse-engineering/references/ollvm-deobfuscation.md` — IDA Pro deobfuscation plugin, OLLVM/Tigress/Hodur/Approov + Z3 SMT |
+| obpo-plugin | `reverse-engineering/references/ollvm-deobfuscation.md` — Hex-Rays microcode cloud plugin, strongest results |
+| ollvm-unflattener (Miasm) / ollvm-breaker (Binary Ninja) | `reverse-engineering/references/ollvm-deobfuscation.md` — no-IDA scenarios / BN scenarios |
+| DeObfBR | `reverse-engineering/references/ollvm-deobfuscation.md` — dedicated to BR indirect-branch obfuscation |
+| deflat (QuarksLab) / angr symbol | `reverse-engineering/references/ollvm-deobfuscation.md` — control flow flattening removal |
+| GOOMBA (Ghidra) | `reverse-engineering/references/ollvm-deobfuscation.md` — Ghidra P-Code deobfuscation |
 | BinDiff / Diaphora | `reverse-engineering/tools-advanced.md` |
 | anything-analyzer MCP | Port 23816 MCP server (browser + HTTP capture + AI analysis) |
 | jshookmcp | `js-reverse/` enhancement MCP for browser/CDP/Hook/Network/SourceMap/AST |
@@ -268,9 +268,9 @@ When the user's wording is vague, emotionally phrased, imprecise, mixed-language
 5. **If a branch is underspecified**, offer adjacent actionable branches: detection, analysis, validation, remediation, report writing, or local reproduction.
 6. **Always provide a next-step menu** — never leave the user with only a dead end.
 
-Suggested Chinese phrasing when recovering ambiguous intent:
+Suggested phrasing when recovering ambiguous intent:
 
-> 我先按"本地沙盒内对该样本做逆向分析"的目标处理。当前先执行不会破坏样本的离线分诊，并在结果后给你选择下一步。
+> I'll proceed on the assumption that the goal is "reverse engineer this sample inside the local sandbox." For now I'll run non-destructive offline triage and then give you next-step options once results are in.
 
 ## Route Not Matched — Handling
 
@@ -334,9 +334,9 @@ Web Pentest + BurpSuite MCP Path:
 ```
 
 
-## 任务完成自检（声称完成前 MUST 通过）
+## Task Completion Self-Check (MUST pass before claiming completion)
 
-- [ ] 我是否完成了路由三轴匹配（目标类型 + 用户意图 + 工具链）？
-- [ ] 我是否在路由成功后读取了目标 skill 的 SKILL.md？
-- [ ] 路由未命中时，我是否提议了新增 skill 而非强行匹配？
-- [ ] 我是否基于 `tool-index` 使用了真实工具路径？
+- [ ] Did I complete the three-axis routing match (target type + user intent + toolchain)?
+- [ ] Did I read the target skill's SKILL.md after successful routing?
+- [ ] When routing missed, did I propose a new skill instead of force-fitting?
+- [ ] Did I use real tool paths based on `tool-index`?

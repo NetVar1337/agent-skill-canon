@@ -1,6 +1,6 @@
 ---
 name: game-hacking
-description: Game hacking workflow for exploits, cheats, speedhacks, memory manipulation, protocol RE, and anti-cheat bypass. Covers game memory structures, hooking, injection, and packet editing. Invoke with /game-hacking or when the task involves game exploits or cheats.
+description: Use for authorized game security research involving Unreal, Unity, Source, or custom-engine reverse engineering, build-pinned offsets, external/internal instrumentation, overlays, speed/time virtualization, client-server protocol and logic exploits, reconciliation or rollback trust, cheat telemetry, and anti-cheat experiments. Routes offset dumping, protocol RE, exploit development, and detection validation to the correct specialist.
 ---
 
 # Game hacking workflow
@@ -10,6 +10,19 @@ description: Game hacking workflow for exploits, cheats, speedhacks, memory mani
 Use when the task involves game exploits, cheat development, speedhacks,
 game memory manipulation, game protocol reverse engineering, or anti-cheat
 bypass.
+
+## Route first
+
+| Actual objective | PRIMARY / handoff |
+|---|---|
+| Engine objects, reflection, schemas, or patch offsets | Start here; hand extraction/regression tooling to `offset-dumper` |
+| External reader, internal hook, or render surface | Start here; route rendering to `imgui-overlay` |
+| Message grammar, replay, parser, or server logic | `network-protocol-re`, with this skill retaining game trust semantics |
+| Memory-corruption primitive | `exploit-dev`; do not mix it with cheat-feature validation |
+| Anti-cheat sensor/heartbeat/integrity behavior | `anti-cheat-bypass`, then `windows-telemetry-etw` for ETW evidence |
+| Hyper-V/VMBus/root-partition surface | `hyper-v-offensive`, not a generic game offset workflow |
+
+One case may cross rows, but each experiment gets one objective, one build, and one measurable outcome.
 
 ## Workflow
 
@@ -27,6 +40,26 @@ bypass.
 3. Find the game loop / tick function.
 4. Map the rendering pipeline (D3D11/12, Vulkan, OpenGL).
 5. Identify network layer (UDP custom, TCP, WebSocket, Steam networking).
+
+## Build provenance and offset regression contract
+
+Before accepting any address or schema, record executable/module SHA-256, PE timestamp or ELF Build ID, file/product version, engine version/commit, distribution channel, architecture, anti-cheat service/driver versions, symbol/dump tool versions, and server protocol/schema version.
+
+```powershell
+Get-FileHash .\game.exe,.\GameAssembly.dll -Algorithm SHA256
+(Get-Item .\game.exe).VersionInfo | Format-List FileVersion,ProductVersion
+sigcheck64.exe -nobanner -h -i .\game.exe
+```
+
+Store each recovered value as `module hash + RVA/field + extraction source + signature + semantic assertions`, never as a bare offset. A regression run must:
+
+1. require one executable-section signature match and resolve every relative displacement inside the expected module;
+2. validate pointer canonicality, object/class identity, field alignment/range, and at least one live state transition;
+3. compare reflection/schema output with a separate runtime or disassembly observation;
+4. fail closed on zero/multiple matches or a changed enclosing function; and
+5. emit an old/new manifest diff before generated bindings are rebuilt.
+
+Route manifest generation, signature uniqueness, and CI drift alarms to `offset-dumper`.
 
 ### 2. Memory structure discovery
 
@@ -66,6 +99,14 @@ entity_list + (index * stride) → entity_ptr
 entity_ptr + health_offset → health_value
 ```
 
+### Engine extraction and validation recipes
+
+- **Unreal:** pin the cooked build, then recover `FNamePool`, `GUObjectArray`, and `GWorld`. Validate `FUObjectArray` bounds and `UObject::{ClassPrivate,NamePrivate,OuterPrivate}` before walking `UStruct::{SuperStruct,ChildProperties}`. A generated SDK passes only when sampled names/classes match runtime objects and a known actor transform changes coherently in two observations.
+- **Unity IL2CPP:** run `Il2CppDumper.exe GameAssembly.dll global-metadata.dat out`, retain the metadata header/version and tool log, and map generated `MethodInfo`/field offsets back to `GameAssembly.dll` RVAs. Validate a type through both metadata and a runtime IL2CPP API such as `il2cpp_class_from_name`; separate Mono builds and use Mono reflection APIs instead of forcing an IL2CPP layout.
+- **Source:** acquire `SchemaSystem_001`, enumerate the correct module type scope, and retain `CSchemaClassInfo` field names/types/offsets. For Source 1, recover `RecvTable`/`RecvProp` instead. Validate entity-system bounds, class identity, and one netvar against a live update before emitting bindings.
+
+Every recipe keeps the raw dump, tool version, module hashes, generated schema, validation log, and rejected ambiguous signatures.
+
 ### 3. Exploit types
 
 **Speedhack:**
@@ -75,13 +116,16 @@ entity_ptr + health_offset → health_value
    - Network timestamp fields.
 2. Hook the time function to return scaled time:
    ```c
-   // Detour QueryPerformanceCounter
+   // Capture real_base and virtual_base atomically when the hook is enabled.
    BOOL WINAPI Hooked_QPC(LARGE_INTEGER *count) {
-       BOOL ret = Original_QPC(count);
-       count->QuadPart = (LONGLONG)(count->QuadPart * g_speed_multiplier);
-       return ret;
+       LARGE_INTEGER now;
+       if (!Original_QPC(&now)) return FALSE;
+       count->QuadPart = virtual_base.QuadPart + (LONGLONG)
+           ((now.QuadPart - real_base.QuadPart) * g_speed_multiplier);
+       return TRUE;
    }
    ```
+   Keep `QueryPerformanceFrequency` unchanged. When the multiplier changes, atomically rebase `virtual_base` to the current virtual value and `real_base` to the current raw counter so time stays continuous and monotonic; test concurrent callers and server correction separately.
 3. Or modify the game's internal delta-time / tick-rate variable directly.
 4. For server-authoritative: manipulate client-side prediction only
    (server will correct, but gives temporary advantage).
@@ -119,6 +163,14 @@ entity_ptr + health_offset → health_value
    - Teleport (modify position packet).
    - Item spawn (craft item-create packet).
    - Auth bypass (skip or replay auth sequence).
+
+## Server authority, tick, reconciliation, and rollback
+
+Map ownership per field: client input, client prediction, server simulation, replicated snapshot, reconciliation rule, rollback window, and final persistence transaction. Join packet captures/runtime hooks by client command number, client tick, server tick, acknowledgement, snapshot ID, correction delta, and backend transaction ID.
+
+A valid logic test changes one client-controlled field and records whether the server rejects, clamps, rewinds/resimulates, accepts transiently, or commits persistently. Replaying movement without inventory persistence does not prove a durable server exploit. Negative controls use a valid sequence and one deliberately stale/duplicate/out-of-window sequence; reset through a server-confirmed state event rather than a delay.
+
+Route message framing/encryption/replay harnesses to `network-protocol-re`; route a parser memory-safety primitive to `exploit-dev`.
 
 ### 4. Cheat development
 
@@ -158,31 +210,34 @@ entity_ptr + health_offset → health_value
 2. If valid enemy: simulate fire (set `m_nButtons` |= `IN_ATTACK`).
 3. Add reaction delay (randomized) for humanization.
 
-### 5. Anti-cheat bypass
+### 5. Anti-cheat research hypotheses
 
-See also: `/kernel-dev` (callback removal, VAD spoofing), `/byovd`
-(kernel R/W), `/hypervisor-dev` (EPT hooks for stealth).
+See also: `anti-cheat-bypass` for product-specific implementation, `kernel-dev` for supported driver mechanics, `byovd` for a third-party vulnerable-driver boundary, and `hyper-v-offensive`/`hypervisor-dev` for virtualization research. The items below are candidate surfaces, not portable bypass claims; test one against a pinned product/build and healthy telemetry.
 
-**User-mode bypass:**
-- Unhook `ntdll` (map fresh copy from disk, overwrite `.text`).
-- Hide injected DLL from `InLoadOrderModuleList` /
-  `InMemoryOrderModuleList` / `InInitializationOrderModuleList`.
-- Patch `NtQueryVirtualMemory` to hide RWX regions.
-- Spoof thread call stacks (return address spoofing).
+**User-mode candidate surfaces:** compare same-hash `ntdll` remapping/unhooking, loader-list visibility, `NtQueryVirtualMemory` observations, and captured stacks as separate variables; retain module/VAD/stack evidence before and after.
 
-**Kernel-mode bypass:**
-- Remove anti-cheat callbacks (process, thread, image, registry).
-- Spoof VAD entries for injected regions.
-- EPT hooks: execute original code, read/write sees patched code.
-- Disable ETW (patch `EtwEventWrite`).
-- Handle stripping: remove anti-cheat's handles to game process.
+**Kernel/hypervisor candidate surfaces:** callback ownership, VAD observations, EPT split views, ETW provider behavior, and handle filtering belong to their specialist skills. Never directly remove another component's callbacks as a generic driver workflow.
 
-**Detection avoidance:**
-- No `ReadProcessMemory` from external process (use kernel R/W).
-- No RWX memory (use RW + separate X, or RX only).
-- No hardcoded strings (hash or encrypt).
-- Randomize timing, humanize aim curves.
-- Clean up all traces on unload.
+**Detection hypotheses:** measure `ReadProcessMemory` versus the selected access path, RW→RX versus mapped-image lifecycle, string/config handling, input timing/curves, and unload cleanup independently. Kernel access, encrypted strings, or randomized timing do not imply low visibility.
+
+## Baseline-versus-modified detection validation
+
+Pin game/anti-cheat/service/driver hashes, policy, account/test environment, backend connectivity, and telemetry source health. For each technique run:
+
+| Run | Purpose | Required evidence |
+|---|---|---|
+| Clean baseline | establish normal events and server corrections | ETL/service logs/network timeline with known action markers |
+| Positive control | prove the expected sensor/report path is alive | vendor-supported test event and correlated backend result |
+| One modified variable | test the hypothesis | same action markers, local events, heartbeat/report, server outcome |
+| Rollback | prove cleanup and recovery | module/handle/hook state restored and positive control works again |
+
+Classify local block, kick, delayed report, telemetry-only, ban, server correction, crash, and no observed delta separately. Absence is inconclusive if event loss, heartbeat health, cloud ingestion, or policy differs. Route ETW session/provider/loss work to `windows-telemetry-etw` and anti-cheat implementation to `anti-cheat-bypass`.
+
+## Routing
+
+- Batch A siblings: `bof-coff-development`, `windows-rpc-com-attack`, `windows-telemetry-etw`, and `hyper-v-offensive`.
+- Batch B siblings: `linux-kernel-exploitation`, `c2-implant-engineering`, `ebpf-offensive`, and `linux-host-post-exploitation`.
+- Game-specific implementation routes: `offset-dumper`, `imgui-overlay`, `network-protocol-re`, `anti-cheat-bypass`, and `exploit-dev`.
 
 ## Tooling reference
 
@@ -201,11 +256,11 @@ See also: `/kernel-dev` (callback removal, VAD spoofing), `/byovd`
 
 ## Verification checklist
 
-- [ ] Game engine and anti-cheat identified
-- [ ] Key offsets found and verified (pattern scan preferred)
-- [ ] Memory read/write working (external or internal)
-- [ ] Render hook or overlay functional
-- [ ] Anti-cheat bypass stable (no detection after extended play)
-- [ ] Exploit PoC reliable and minimized
-- [ ] Protocol documented with field table (if network exploit)
-- [ ] Cleanup on unload (no dangling hooks, freed memory)
+- [ ] Route-first objective, game/server build, engine, anti-cheat, module hashes, and schema versions are pinned
+- [ ] Every offset has provenance, a unique signature, semantic assertions, and an old/new regression result
+- [ ] UE/Unity/Source extraction is confirmed by an independent runtime or disassembly observation
+- [ ] Time virtualization is baseline-relative, monotonic across multiplier changes, and separated from server correction
+- [ ] Server trust tests distinguish rejection, transient acceptance, rollback/reconciliation, and durable commit
+- [ ] Clean baseline and positive control prove telemetry/report health before a modified run is interpreted
+- [ ] Detection outcomes distinguish block, kick, delayed report, telemetry, ban, correction, crash, and inconclusive
+- [ ] Hooks, allocations, handles, sessions, and server test state are restored

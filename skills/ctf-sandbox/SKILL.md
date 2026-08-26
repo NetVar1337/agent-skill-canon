@@ -1,23 +1,23 @@
 ---
 name: ctf-sandbox
-description: Thin PRIMARY for CTF / AWD / 靶场 multi-type orchestration. Hands off to the sidecar CTF-Sandbox-Orchestrator. Use when the user says CTF, AWD, 靶场, or 比赛题 and no more specific pwn/APK/IDA route already won.
+description: Thin PRIMARY for CTF / AWD / range multi-type orchestration. Hands off to the sidecar CTF-Sandbox-Orchestrator. Use when the user says CTF, AWD, range, or competition task and no more specific pwn/APK/IDA route already won.
 ---
 
 # CTF sandbox entry (sidecar, not a second router)
 
-## ACTION REQUIRED（读完后立刻执行）
+## ACTION REQUIRED (execute immediately after reading)
 
-1. `NOW`: 跑 `../scripts/case-init.ps1`；`auth.status=granted` 前禁止对真实外网 ACT。竞赛/靶场用 `-NetworkProfile lab` 或 `offline`。
-2. `NOW`: 若包根存在 `../../CTF-Sandbox-Orchestrator/ctf-sandbox-orchestrator/SKILL.md`，打开它按 sandbox 假设继续。**该 sidecar 未安装时（当前工作站状态）**：跳过此步，本 skill 直接充当编排层——按题型分流 `pwn-chain`（pwn/ROP）、`apk-reverse`（APK）、`ida-reverse`/`r2mcp-basic`（RE）、`web` 类走 `api-security`/`pentest-tools`，靶场边界仍以 scope 的 NetworkProfile 为准。
-3. `MUST NOT` 把 40+ 个 `competition-*` 子技能写进 `routing.json`。本入口只是一条 PRIMARY 门闩。
-4. `ACT`: 由 orchestrator 选一个 downstream `competition-*`。具体题型已明确时（pwn/ROP、APK、IDA）应已由 `routing.json` 更靠前的规则赢下，不要再抢。
+1. `NOW`: run `../scripts/case-init.ps1`; acting against the real external internet is forbidden until `auth.status=granted`. Competitions/ranges use `-NetworkProfile lab` or `offline`.
+2. `NOW`: if `../../CTF-Sandbox-Orchestrator/ctf-sandbox-orchestrator/SKILL.md` exists at the package root, open it and continue under its sandbox assumptions. **When that sidecar is absent (current workstation state)**: skip this step — this skill acts as the orchestrator directly, routing by problem type: `pwn-chain` (pwn/ROP), `apk-reverse` (APK), `ida-reverse`/`r2mcp-basic` (RE), web classes to `api-security`/`pentest-tools`; range boundaries still follow the scope's NetworkProfile.
+3. `MUST NOT` write the 40+ `competition-*` sub-skills into `routing.json`. This entry is only a PRIMARY gate.
+4. `ACT`: the orchestrator picks a downstream `competition-*`. When the problem type is already explicit (pwn/ROP, APK, IDA), an earlier `routing.json` rule should have won — don't steal it.
 
-## 为什么单独一层
+## Why a separate layer
 
-`CTF-Sandbox-Orchestrator/` 是 **GPL 旁路包**，授权默认是沙箱内部。核心路由包仍是 MIT + `scope.md` 门禁。本 skill 只做关键词入口，不把竞赛树并进核心。
+`CTF-Sandbox-Orchestrator/` is a **GPL sidecar pack**; its authorization default is inside the sandbox. The core routing pack stays MIT + the `scope.md` gate. This skill is only a keyword entry point — it does not merge the competition tree into the core.
 
-## 任务完成自检（声称完成前 MUST 通过）
+## Pre-completion self-check (MUST pass before claiming done)
 
-- [ ] 我是否先走了 case-init / scope，而不是把“用户说了 CTF”当成已授权外网？
-- [ ] 我是否打开了 sidecar orchestrator（或在 sidecar 缺失时按上面的分流表接管），而不是把 40 个子技能当 PRIMARY？
-- [ ] 若任务其实是 pwn/APK/IDA，我是否让更具体的 PRIMARY 接手？
+- [ ] Did I run case-init / scope first, instead of treating "user said CTF" as authorization for the open internet?
+- [ ] Did I open the sidecar orchestrator (or take over via the routing table above when the sidecar is missing), rather than treating the 40 sub-skills as PRIMARY?
+- [ ] If the task was really pwn/APK/IDA, did I let the more specific PRIMARY take over?

@@ -1,0 +1,13 @@
+{
+  "name": "android-reverse-engineering",
+  "repo": "SimoneAvogadro/android-reverse-engineering-skill",
+  "commit": "e8dde9d058badbd5a62265d5d23e81f0ea8f04dd",
+  "subpath": "plugins/android-reverse-engineering/skills/android-reverse-engineering",
+  "license": "Apache-2.0",
+  "url": "https://codeload.github.com/SimoneAvogadro/android-reverse-engineering-skill/zip/e8dde9d058badbd5a62265d5d23e81f0ea8f04dd",
+  "archive_sha256": "070e9eb38fe76cde124e9125a3306e8b876bf54297d24d8eb7c14f826cfe3b2d",
+  "installed_at_utc": "2026-08-24T18:56:28Z",
+  "local_patches": [
+    "Added required frontmatter name: android-reverse-engineering for Agent Skills loader compatibility."
+  ]
+}

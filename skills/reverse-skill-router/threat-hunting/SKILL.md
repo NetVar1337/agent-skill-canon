@@ -1,84 +1,83 @@
 ---
 name: router-reverse-skill-router-threat-hunting
 description: Use for blue-team threat hunting, detection engineering with Sigma/YARA, SIEM query design, and incident detection validation.
-disable-model-invocation: true
 ---
 
 # Threat Hunting & Detection Engineering
 
-## ACTION REQUIRED（读完后立刻执行）
+## ACTION REQUIRED (execute immediately after reading)
 
-1. `NOW`: 确认蓝队/狩猎授权与数据源范围（SIEM、EDR 导出）
-2. `NOW`: 明确假说（hypothesis）再查数，避免无脑刷告警
-3. `NEXT`: 工具与数据接入方式
-4. `ACT`: 假说 → 查询 → 验证 → 规则化
+1. `NOW`: Confirm blue-team/hunting authorization and the data source scope (SIEM, EDR exports)
+2. `NOW`: Form a hypothesis before querying data; avoid blindly grinding through alerts
+3. `NEXT`: Tools and data onboarding approach
+4. `ACT`: Hypothesis → query → validate → turn into rules
 
-## 适用场景
+## Applicable Scenarios
 
-- 威胁狩猎（hypothesis-driven）
-- Sigma / YARA 检测工程
-- 告警调优、误报分析
-- 与 `malware-analysis/`：样本侧 IOC → 本 skill 落地检测
-- 与 `digital-forensics/`：案件伪影 → 横向狩猎
+- Threat hunting (hypothesis-driven)
+- Sigma / YARA detection engineering
+- Alert tuning, false-positive analysis
+- With `malware-analysis/`: sample-side IOCs → this skill lands them as detections
+- With `digital-forensics/`: case artifacts → lateral hunting
 
-## 工作流
+## Workflow
 
-### 1. 建假说
-
-```text
-例：攻击者用 living-off-the-land 做横向
-→ 数据源：Sysmon 1/3/10、Windows Security 4624/4648
-→ 成功标准：发现异常父进程或罕见账户日志源
-```
-
-### 2. 查询与堆叠
+### 1. Form a hypothesis
 
 ```text
-□ 基线：正常管理员行为时段与主机
-□ 异常：新服务、编码 PowerShell、异常出站
-□ 关联：同账号多主机短时登录
+Example: attackers use living-off-the-land for lateral movement
+→ Data sources: Sysmon 1/3/10, Windows Security 4624/4648
+→ Success criteria: find anomalous parent processes or rare account log sources
 ```
 
-### 3. 规则化
+### 2. Query and stacking
+
+```text
+□ Baseline: normal administrator behavior time windows and hosts
+□ Anomalies: new services, encoded PowerShell, unusual egress
+□ Correlation: the same account logging into many hosts in a short window
+```
+
+### 3. Turn into rules
 
 ```yaml
-# Sigma 骨架见 malware-analysis；本 skill 强调：
-# - 误报面
-# - 数据源字段映射
-# - 响应 playbook 链接
+# Sigma skeletons are in malware-analysis; this skill emphasizes:
+# - False-positive surface
+# - Data source field mapping
+# - Response playbook linkage
 ```
 
-### 4. 验证
+### 4. Validation
 
 ```text
-□ 原子测试（Atomic Red Team）仅在授权实验室
-□ 回放历史日志验证召回
+□ Atomic tests (Atomic Red Team) only in an authorized lab
+□ Replay historical logs to verify recall
 ```
 
-## 工具链
+## Toolchain
 
-| 工具 | 用途 |
+| Tool | Purpose |
 |------|------|
-| Sigma CLI / sigmac | 规则转换 |
-| YARA | 文件/内存 |
-| SIEM（ELK/Splunk 等） | 查询 |
-| osquery | 端点狩猎 |
-| Atomic Red Team | 检测验证（实验室） |
+| Sigma CLI / sigmac | Rule conversion |
+| YARA | Files/memory |
+| SIEM (ELK/Splunk etc.) | Querying |
+| osquery | Endpoint hunting |
+| Atomic Red Team | Detection validation (lab) |
 
-## 参考
+## References
 
 - `references/hunting-loop.md`
 - `../malware-analysis/references/yara-sigma-rules.md`
 - `../digital-forensics/`
 
-## 路由上下文
+## Routing Context
 
-**上游**: MASTER R27  
-**下游**: 确认入侵 → forensics；恶意样本 → malware-analysis  
-**MUST NOT**: 在无授权生产环境跑攻击模拟
+**Upstream**: MASTER R27  
+**Downstream**: confirmed intrusion → forensics; malicious sample → malware-analysis  
+**MUST NOT**: run attack simulations in unauthorized production environments
 
-## 任务完成自检
+## Task Completion Self-Check
 
-- [ ] 是否有明确假说与结论？
-- [ ] 规则是否注明误报与数据源？
-- [ ] Checklist？
+- [ ] Is there a clear hypothesis and conclusion?
+- [ ] Do the rules document false positives and data sources?
+- [ ] Checklist?

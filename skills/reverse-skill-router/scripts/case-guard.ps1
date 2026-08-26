@@ -61,7 +61,7 @@ if ([string]::IsNullOrWhiteSpace($netMode)) {
     [void]$issues.Add("network_profile.mode is unsupported: $netMode")
 } elseif ($netMode -eq 'offline') {
     # offline is only OK if sample path mentioned in assets/notes — soft note
-    if ($scope -notmatch 'sample|offline.?path|本地.?样本|\.apk\b|\.bin\b|\.exe\b') {
+    if ($scope -notmatch 'sample|offline.?path|local.?sample|\.apk\b|\.bin\b|\.exe\b') {
         [void]$issues.Add('network_profile.mode is offline without offline sample cue')
     }
 }

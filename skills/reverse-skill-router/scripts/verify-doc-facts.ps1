@@ -37,7 +37,7 @@ function Get-ListLine([string]$Text, [string]$Marker) {
   $lines = $Text -split "`r?`n"
   for ($i = 0; $i -lt $lines.Count; $i++) {
     if ($lines[$i] -match [regex]::Escape($Marker)) {
-      $inline = [regex]::Match($lines[$i], '）：(.+?)\s*$')
+      $inline = [regex]::Match($lines[$i], '):(.+?)\s*$')
       if ($inline.Success) { return $inline.Groups[1].Value }
       if ($i + 1 -lt $lines.Count) { return $lines[$i + 1] }
     }
@@ -57,13 +57,13 @@ $rulesZh = Get-Content (Join-Path $Root 'RULES_zh.md') -Raw -Encoding UTF8
 $skillMd = Get-Content (Join-Path $Root 'skills\SKILL.md') -Raw -Encoding UTF8
 
 $enList = Get-ListLine $rulesEn 'Supported capability names'
-$zhList = Get-ListLine $rulesZh '支持的能力名'
-$skList = Get-ListLine $skillMd '支持的能力'
+$zhList = Get-ListLine $rulesZh 'Supported capability names'
+$skList = Get-ListLine $skillMd 'Supported capabilities'
 
 Check 'RULES.md capability list' (Test-ListHasAll $enList $capNames) "expected $($capNames.Count) capabilities: $($capNames -join ', ')"
 Check 'RULES_zh.md capability list' (Test-ListHasAll $zhList $capNames) "expected $($capNames.Count) capabilities"
 Check 'SKILL.md capability list' (Test-ListHasAll $skList $capNames) "expected $($capNames.Count) capabilities"
-Check 'RULES_zh.md count text' ($rulesZh.Contains("共 $($capNames.Count) 项")) "expected 共 $($capNames.Count) 项"
+Check 'RULES_zh.md count text' ($rulesZh.Contains("total of $($capNames.Count)")) "expected total of $($capNames.Count)"
 
 # --- MCP ports from manifest servicePort / servicePortRange ---
 foreach ($c in $manifest.capabilities) {
@@ -80,7 +80,7 @@ foreach ($c in $manifest.capabilities) {
 
 # --- Burp tool count ---
 Check 'RULES.md burp tool count' ($rulesEn.Contains("$burpCount-tool")) "expected '$burpCount-tool' in RULES.md"
-Check 'RULES_zh.md burp tool count' ($rulesZh.Contains("$burpCount 工具全控制")) "expected '$burpCount 工具全控制' in RULES_zh.md"
+Check 'RULES_zh.md burp tool count' ($rulesZh.Contains("$burpCount tools full control")) "expected '$burpCount tools full control' in RULES_zh.md"
 
 Write-Host "verify-doc-facts: $fail failure(s)"
 if ($fail -gt 0) { exit 1 }

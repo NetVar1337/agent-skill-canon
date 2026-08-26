@@ -1,240 +1,240 @@
-# Go 二进制逆向指南
+# Go Binary Reverse Engineering Guide
 
-> Go 编译的二进制有独特的挑战：静态链接导致体积巨大、函数数量上万、字符串格式特殊、符号 strip 后恢复困难。
-> 本文档覆盖工具链、恢复技巧和实战工作流。
+> Go-compiled binaries pose unique challenges: static linking produces huge sizes, tens of thousands of functions, unusual string formats, and difficult symbol recovery after stripping.
+> This document covers the toolchain, recovery techniques, and a practical workflow.
 
 ---
 
-## Go 二进制的特征识别
+## Identifying Go Binaries
 
-快速判断一个二进制是否是 Go 编译的：
+Quickly determine whether a binary was compiled with Go:
 
 ```bash
-# 字符串特征
+# String signatures
 strings binary | grep -E "runtime\.|go\.buildid|GOROOT"
 
-# rabin2 侦察
+# rabin2 reconnaissance
 rabin2 -z binary | grep -i "runtime"
 
-# 文件大小异常大（静态链接 runtime）
-# 典型 Hello World: C ~20KB, Go ~2MB
+# Abnormally large file size (statically linked runtime)
+# Typical Hello World: C ~20KB, Go ~2MB
 ```
 
-常见特征：
-- 包含 `runtime.` 前缀的大量函数
-- 包含 `go.buildid` section
-- 包含 `GOROOT`、`GOPATH` 路径字符串
-- 函数数量 5000-50000+（包含整个 runtime 和标准库）
+Common characteristics:
+- Large numbers of functions with the `runtime.` prefix
+- Contains a `go.buildid` section
+- Contains `GOROOT`, `GOPATH` path strings
+- Function count of 5000-50000+ (including the entire runtime and standard library)
 
 ---
 
-## 核心工具链
+## Core Toolchain
 
-### 符号恢复
+### Symbol Recovery
 
-| 工具 | 用途 | 链接 |
+| Tool | Purpose | Link |
 |------|------|------|
-| **GoReSym** | Mandiant 出品，解析 Go 符号信息（pclntab/moduledata） | https://github.com/mandiant/GoReSym |
-| **GoResolver** | Volexity 出品，用 CFG 相似度自动去混淆 Garble 二进制 | https://github.com/volexity/GoResolver |
-| **redress** | 分析 stripped Go 二进制，恢复类型/接口/包结构 | https://github.com/goretk/redress |
-| **GoStringUngarbler** | Google 出品，专门恢复 Garble 混淆的字符串 | https://github.com/mandiant/GoStringUngarbler |
+| **GoReSym** | By Mandiant, parses Go symbol information (pclntab/moduledata) | https://github.com/mandiant/GoReSym |
+| **GoResolver** | By Volexity, automatically deobfuscates Garble binaries using CFG similarity | https://github.com/volexity/GoResolver |
+| **redress** | Analyzes stripped Go binaries, recovers types/interfaces/package structure | https://github.com/goretk/redress |
+| **GoStringUngarbler** | By Google, specializes in recovering Garble-obfuscated strings | https://github.com/mandiant/GoStringUngarbler |
 
-### IDA 插件
+### IDA Plugins
 
-| 工具 | 用途 | 链接 |
+| Tool | Purpose | Link |
 |------|------|------|
-| **go_parser** | IDA 插件，解析 moduledata/pclntab/类型信息 | https://github.com/0xjiayu/go_parser |
-| **IDAGolangHelper** | IDA 脚本集，解析 Go 类型信息 | https://github.com/sibears/IDAGolangHelper |
-| **AlphaGolang** | SentinelLabs 的 IDAPython 脚本集 | https://github.com/SentineLabs/AlphaGolang |
-| **IDA 9.2+ 原生支持** | Hex-Rays 官方 Go 反编译改进 | https://hex-rays.com/blog/stop-guessing-and-start-going |
+| **go_parser** | IDA plugin, parses moduledata/pclntab/type information | https://github.com/0xjiayu/go_parser |
+| **IDAGolangHelper** | IDA script collection, parses Go type information | https://github.com/sibears/IDAGolangHelper |
+| **AlphaGolang** | SentinelLabs IDAPython script collection | https://github.com/SentineLabs/AlphaGolang |
+| **IDA 9.2+ native support** | Hex-Rays official Go decompilation improvements | https://hex-rays.com/blog/stop-guessing-and-start-going |
 
-### Ghidra 插件
+### Ghidra Plugins
 
-| 工具 | 用途 | 链接 |
+| Tool | Purpose | Link |
 |------|------|------|
-| **Ghidra + GoReSym 输出** | 用 GoReSym 导出符号后导入 Ghidra | 配合使用 |
-| **golang_loader_assist** | Ghidra Go 加载辅助 | 社区脚本 |
+| **Ghidra + GoReSym output** | Export symbols with GoReSym, then import into Ghidra | Used together |
+| **golang_loader_assist** | Ghidra Go loading assistant | Community script |
 
-### 独立分析工具
+### Standalone Analysis Tools
 
-| 工具 | 用途 | 链接 |
+| Tool | Purpose | Link |
 |------|------|------|
-| **gore** | Go 逆向工程库（redress 的底层） | https://github.com/goretk/gore |
-| **garble** | Go 混淆工具（了解它才能对抗它） | https://github.com/burrowers/garble |
+| **gore** | Go reverse engineering library (the engine under redress) | https://github.com/goretk/gore |
+| **garble** | Go obfuscator (know it to beat it) | https://github.com/burrowers/garble |
 
 ---
 
-## Go 二进制的关键结构
+## Key Structures in Go Binaries
 
 ### pclntab (PC Line Table)
 
-Go 二进制中最重要的结构，包含：
-- 所有函数名和地址映射
-- 源文件路径
-- 行号信息
-- 栈帧大小
+The most important structure in a Go binary, containing:
+- All function names and address mappings
+- Source file paths
+- Line number information
+- Stack frame sizes
 
-即使 strip 了符号，pclntab 通常仍然存在（Go runtime 依赖它）。
+Even after symbols are stripped, pclntab usually still exists (the Go runtime depends on it).
 
 ```text
-定位方法：
-1. 搜索 magic bytes: 0xFFFFFFF0 (Go 1.16+) 或 0xFFFFFFFB (Go 1.18+)
-2. 用 GoReSym 自动定位
-3. 用 go_parser IDA 插件自动解析
+Locating it:
+1. Search for magic bytes: 0xFFFFFFF0 (Go 1.16+) or 0xFFFFFFFB (Go 1.18+)
+2. Use GoReSym to locate it automatically
+3. Use the go_parser IDA plugin to parse it automatically
 ```
 
 ### moduledata
 
-包含：
-- pclntab 指针
-- 类型信息表
-- itab（接口表）
-- 全局变量信息
+Contains:
+- pclntab pointer
+- Type information table
+- itab (interface table)
+- Global variable information
 
-### 字符串格式
+### String Format
 
-Go 字符串不是 C 风格的 null-terminated，而是 `(pointer, length)` 结构：
+Go strings are not C-style null-terminated; they are `(pointer, length)` structures:
 
 ```text
-C 字符串:   "hello\0"
-Go 字符串:  struct { ptr *byte; len int } → ptr 指向 "hello"（无 \0）
+C string:  "hello\0"
+Go string: struct { ptr *byte; len int } → ptr points to "hello" (no \0)
 ```
 
-这导致 IDA/Ghidra 默认的字符串识别会漏掉大量 Go 字符串。
+This means the default string identification in IDA/Ghidra misses large numbers of Go strings.
 
-**解决方案**：
-- 用 `go_parser` 自动识别 Go 字符串
-- 用 GoReSym 导出字符串列表
-- 手动：找到 `runtime.stringtable` 或通过交叉引用定位
+**Solutions**:
+- Use `go_parser` to identify Go strings automatically
+- Use GoReSym to export the string list
+- Manually: find `runtime.stringtable` or locate strings via cross-references
 
 ---
 
-## 实战工作流
+## Practical Workflow
 
-### 场景 1：未 strip 的 Go 二进制
-
-```text
-1. GoReSym -t -d -p binary > symbols.json
-   → 导出所有函数名、类型、源文件路径
-2. 加载到 IDA/Ghidra
-3. 导入 GoReSym 的符号信息
-4. 过滤掉 runtime.* 和标准库函数，聚焦用户代码
-5. 从 main.main 开始分析
-```
-
-### 场景 2：strip 后的 Go 二进制
+### Scenario 1: Non-stripped Go Binary
 
 ```text
 1. GoReSym -t -d -p binary > symbols.json
-   → 即使 strip 了，pclntab 通常还在
-2. 如果 GoReSym 失败 → 用 redress
-   redress -src binary    # 恢复源文件路径
-   redress -pkg binary    # 恢复包结构
-   redress -type binary   # 恢复类型信息
-3. 加载到 IDA + go_parser 插件
-4. 运行 go_parser 自动恢复
-5. 从恢复的 main.main 开始
+   → exports all function names, types, source file paths
+2. Load into IDA/Ghidra
+3. Import GoReSym's symbol information
+4. Filter out runtime.* and standard-library functions; focus on user code
+5. Start analysis from main.main
 ```
 
-### 场景 3：Garble 混淆的 Go 二进制
+### Scenario 2: Stripped Go Binary
 
 ```text
-Garble 会：
-- 随机化函数名（main.main → main.a3f2b1c）
-- 加密字符串
-- 移除文件路径信息
-- 混淆包名
-
-对抗方法：
-1. GoResolver（CFG 签名匹配）
-   → 通过控制流图相似度恢复标准库函数名
-2. GoStringUngarbler（字符串解密）
-   → 自动识别 Garble 的字符串加密模式并解密
-3. 动态分析（Frida/dlv）
-   → Hook runtime 函数观察实际行为
-4. 对比分析
-   → 编译同版本 Go 的 Hello World，用 binary-diff 对比 runtime 部分
+1. GoReSym -t -d -p binary > symbols.json
+   → even after stripping, pclntab usually remains
+2. If GoReSym fails → use redress
+   redress -src binary    # recover source file paths
+   redress -pkg binary    # recover package structure
+   redress -type binary   # recover type information
+3. Load into IDA + the go_parser plugin
+4. Run go_parser for automatic recovery
+5. Start from the recovered main.main
 ```
 
-### 场景 4：CGo 混合编译
+### Scenario 3: Garble-Obfuscated Go Binary
 
 ```text
-1. 识别 CGo 边界（_cgo_* 函数）
-2. Go 部分用 go_parser 恢复
-3. C 部分用常规 IDA 分析
-4. 关注 _cgo_topofstack、crosscall2 等桥接函数
+Garble will:
+- Randomize function names (main.main → main.a3f2b1c)
+- Encrypt strings
+- Remove file path information
+- Obfuscate package names
+
+Countermeasures:
+1. GoResolver (CFG signature matching)
+   → recovers standard-library function names via control-flow-graph similarity
+2. GoStringUngarbler (string decryption)
+   → automatically recognizes Garble's string encryption patterns and decrypts
+3. Dynamic analysis (Frida/dlv)
+   → hook runtime functions to observe actual behavior
+4. Comparative analysis
+   → compile a Hello World with the same Go version, use binary-diff to compare the runtime portion
+```
+
+### Scenario 4: Mixed CGo Builds
+
+```text
+1. Identify the CGo boundary (_cgo_* functions)
+2. Recover the Go part with go_parser
+3. Analyze the C part with regular IDA
+4. Watch bridge functions like _cgo_topofstack, crosscall2
 ```
 
 ---
 
-## 常用命令速查
+## Common Command Quick Reference
 
 ```bash
-# GoReSym：导出符号
+# GoReSym: export symbols
 GoReSym -t -d -p binary > symbols.json
-GoReSym -t -d -p binary -o ida_script.py  # 生成 IDA 脚本
+GoReSym -t -d -p binary -o ida_script.py  # generate an IDA script
 
-# redress：分析 stripped 二进制
-redress -src binary          # 源文件路径
-redress -pkg binary          # 包结构
-redress -type binary         # 类型信息
-redress -interface binary    # 接口信息
-redress -filepath binary     # 完整文件路径
+# redress: analyze stripped binaries
+redress -src binary          # source file paths
+redress -pkg binary          # package structure
+redress -type binary         # type information
+redress -interface binary    # interface information
+redress -filepath binary     # full file paths
 
-# GoResolver：去混淆 Garble
+# GoResolver: deobfuscate Garble
 GoResolver -binary binary -output resolved.json
 
-# GoStringUngarbler：解密 Garble 字符串
+# GoStringUngarbler: decrypt Garble strings
 GoStringUngarbler -i binary -o deobfuscated_binary
 
-# 快速判断 Go 版本
+# Quickly determine the Go version
 strings binary | grep "go1\."
 GoReSym -p binary | grep "Version"
 ```
 
 ---
 
-## IDA 中的 Go 分析流程
+## Go Analysis Workflow in IDA
 
 ```text
-1. 加载二进制（选择正确的架构）
-2. 等待自动分析完成
-3. 运行 go_parser 插件：
+1. Load the binary (choose the correct architecture)
+2. Wait for automatic analysis to finish
+3. Run the go_parser plugin:
    - File → Script File → go_parser.py
-   - 或 Edit → Plugins → Go Parser
-4. 插件会自动：
-   - 解析 pclntab
-   - 恢复函数名
-   - 标记 Go 字符串
-   - 解析类型信息
-5. 过滤视图：
-   - 隐藏 runtime.* 函数
-   - 聚焦 main.* 和第三方包
-6. 从 main.main 开始逆向
+   - or Edit → Plugins → Go Parser
+4. The plugin automatically:
+   - parses pclntab
+   - recovers function names
+   - marks Go strings
+   - parses type information
+5. Filter views:
+   - hide runtime.* functions
+   - focus on main.* and third-party packages
+6. Start reversing from main.main
 ```
 
 ---
 
-## 常见陷阱
+## Common Pitfalls
 
-| 陷阱 | 说明 | 解决 |
+| Pitfall | Description | Solution |
 |------|------|------|
-| 函数太多看不过来 | Go 静态链接导致 5000-50000 函数 | 用包名过滤，只看 main.* 和业务包 |
-| 字符串识别不全 | Go 字符串不是 null-terminated | 用 go_parser 或 GoReSym 恢复 |
-| 反编译结果难读 | Go 的 defer/goroutine/interface 让伪代码复杂 | IDA 9.2+ 有改进，或用动态分析辅助 |
-| Garble 混淆 | 函数名/字符串全部随机化 | GoResolver + GoStringUngarbler |
-| 版本差异 | 不同 Go 版本的 pclntab 格式不同 | GoReSym 支持 Go 1.2-1.23+ |
-| CGo 边界 | Go 和 C 代码混合 | 识别 _cgo_* 函数作为分界线 |
+| Too many functions to review | Go static linking yields 5000-50000 functions | Filter by package name; only look at main.* and business packages |
+| Incomplete string identification | Go strings are not null-terminated | Recover with go_parser or GoReSym |
+| Hard-to-read decompilation | Go's defer/goroutine/interface make pseudocode complex | IDA 9.2+ has improvements, or assist with dynamic analysis |
+| Garble obfuscation | Function names/strings all randomized | GoResolver + GoStringUngarbler |
+| Version differences | pclntab formats differ across Go versions | GoReSym supports Go 1.2-1.23+ |
+| CGo boundary | Mixed Go and C code | Identify _cgo_* functions as the dividing line |
 
 ---
 
-## 与其他 skill 的配合
+## Working with Other Skills
 
-| 需求 | 用什么 |
+| Need | Use |
 |------|--------|
-| IDA 深度分析 Go 二进制 | `ida-reverse/` + go_parser 插件 |
-| Ghidra 分析（免费） | Ghidra + GoReSym 符号导入 |
-| 快速侦察 | `radare2/` — `rabin2 -z` 看字符串 |
-| 动态 Hook | Frida（Hook runtime 函数）或 dlv（Go 原生调试器） |
-| 跨版本对比 | `binary-diff/` — 旧版有符号迁移到新版 |
-| Garble 去混淆 | GoResolver + GoStringUngarbler |
+| Deep IDA analysis of Go binaries | `ida-reverse/` + go_parser plugin |
+| Ghidra analysis (free) | Ghidra + GoReSym symbol import |
+| Quick reconnaissance | `radare2/` — `rabin2 -z` for strings |
+| Dynamic hooking | Frida (hook runtime functions) or dlv (native Go debugger) |
+| Cross-version comparison | `binary-diff/` — migrate old-version symbols to the new version |
+| Garble deobfuscation | GoResolver + GoStringUngarbler |

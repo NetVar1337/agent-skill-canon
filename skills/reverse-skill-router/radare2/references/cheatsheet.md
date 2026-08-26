@@ -1,6 +1,6 @@
-# radare2 速查表
+# radare2 Cheat Sheet
 
-## 基础侦察
+## Basic Reconnaissance
 
 ```powershell
 rabin2 -I sample.exe
@@ -10,7 +10,7 @@ rabin2 -E sample.exe
 rabin2 -zz sample.exe
 ```
 
-## 进入交互
+## Entering the Interactive Session
 
 ```powershell
 r2 sample.exe
@@ -27,7 +27,7 @@ pdf
 q
 ```
 
-## 字符串和引用
+## Strings and References
 
 ```text
 iz~http
@@ -37,7 +37,7 @@ s <addr>
 pdf
 ```
 
-## 常用查看
+## Common Viewing
 
 ```text
 px 64
@@ -46,7 +46,7 @@ psz
 pxa
 ```
 
-## patch
+## Patching
 
 ```powershell
 r2 -w sample.exe
@@ -59,13 +59,13 @@ wx 9090
 wq
 ```
 
-## 非交互模式
+## Non-Interactive Mode
 
 ```powershell
 r2 -A -q -c "afl;iz;ii;q" sample.exe
 ```
 
-## 其他工具
+## Other Tools
 
 ### rasm2
 
@@ -96,16 +96,16 @@ rax2 4198400
 rax2 -s hello
 ```
 
-## radare2-skills 生态命令
+## radare2-skills Ecosystem Commands
 
-### r2xsql 查询示例
+### r2xsql query examples
 
 ```powershell
 r2xsql -s sample.exe -q "SELECT name, module FROM imports WHERE name LIKE '%Crypt%'"
 r2xsql -s sample.exe -q "SELECT addr, content FROM strings WHERE content LIKE '%http%'"
 ```
 
-### r2http / r2mcp 会话
+### r2http / r2mcp session
 
 ```powershell
 r2 -N -e http.bind=localhost -e http.port=9393 -e http.sandbox=false -q -c=h sample.exe
@@ -113,14 +113,14 @@ curl.exe -sS --data-binary 'aaa' http://127.0.0.1:9393/cmd
 curl.exe -sS --data-binary 'aflj' http://127.0.0.1:9393/cmd
 ```
 
-### radius2 符号执行
+### radius2 symbolic execution
 
 ```powershell
 radius2 -p sample.exe -s stdin 96 -X Incorrect
 radius2 -p sample.exe -s flag 256 -A . flag -B Correct -X Wrong -j
 ```
 
-### r2pm 插件安装
+### r2pm plugin installation
 
 ```powershell
 r2pm -ci r2ghidra

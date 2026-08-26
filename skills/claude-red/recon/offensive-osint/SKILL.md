@@ -395,3 +395,21 @@ description: "Comprehensive OSINT methodology skill for offensive security, red 
 - [Discord ID](https://discord.id/) — Basic Discord account information
 - Sogou Weixin search — WeChat Official Accounts content search
 - View public Telegram channels: `https://t.me/s/<channel>`
+
+---
+
+## Structured Methodology Addendum
+
+Treat collection as a reproducible campaign, not a tool checklist. Start with a target charter: scope, permitted sources, collection window, expected deliverable, and an identity/asset seed list. For every pivot, record the source URL or API query, UTC retrieval time, account or browser persona, raw artifact hash, and the observation separately from the inference it supports. Mark each link low, medium, or high confidence and retain plausible alternatives.
+
+### Persona and evidence hygiene
+
+- Isolate each case and research persona in a separate browser profile or container; do not mix personal logins with collection accounts. Audit extensions before use, preserve recovery material offline, and keep a minimal chain of custody for screenshots, exports, and downloaded files.
+- Archive volatile pages early as URL, timestamped screenshot, and WARC or SingleFileZ capture. Normalize observations into JSONL/NDJSON with a `run_id`, tool version, source, pivot, and confidence so another operator can replay the path.
+- Favor durable pivots such as certificate serials, registrar accounts, code-signing material, account IDs, and build-path idioms over transient IP resolution. Require multiple independent signals before making an attribution claim.
+
+### Cross-chain and media pivots
+
+- For rollups, anchor a hypothesis in L1 deposit or withdrawal events, then trace the destination chain with its native explorer. Treat bridge mint/burn, pool swaps, relayers, finality delays, and privacy systems as breaks in a presumed one-to-one flow; validate labels and relationships with more than one data source.
+- For images and video, preserve the original before analysis. Extract metadata, key frames, visible text, shadow direction, landmarks, terrain, weather, and sound separately; test candidate locations against maps, street imagery, satellite history, and UTC time calculations. Record rejected candidates as well as the selected hypothesis.
+- For social, Telegram, WeChat, Bluesky, and Fediverse material, preserve stable IDs (message ID, CID, DID, actor URL, or handle history) with the content. Platform search results and account names are leads, not identity proof.

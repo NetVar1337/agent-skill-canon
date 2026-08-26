@@ -1,0 +1,7 @@
+interface:
+  display_name: "Analyze Function"
+  short_description: "Strict five-step single-function analysis"
+  default_prompt: "Use $headless-ghidra-analyze-function to thoroughly analyze one function in strict recovery order."
+
+policy:
+  allow_implicit_invocation: false

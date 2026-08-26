@@ -14,7 +14,7 @@ Six intensity levels:
 | `full` | Default. Drop articles, fragments OK, short synonyms. |
 | `ultra` | Bare fragments. Abbreviations (DB, auth, fn). Arrows for causality. |
 | `wenyan-lite` | Classical Chinese register, light compression. |
-| `wenyan-full` | Maximum 文言文. 80-90% character reduction. |
+| `wenyan-full` | Maximum Classical Chinese (wenyan). 80-90% character reduction. |
 | `wenyan-ultra` | Extreme classical compression. |
 
 Auto-clarity rule: caveman drops to normal prose for security warnings, irreversible-action confirmations, multi-step sequences where fragment ambiguity risks misread, and when user repeats a question. Resumes after the clear part.

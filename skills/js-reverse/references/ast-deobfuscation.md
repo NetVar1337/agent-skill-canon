@@ -1,3 +1,3 @@
-# AST 去混淆
+# AST Deobfuscation
 
-前提是页面取证和本地复现已经基本跑通。不要在未跑通前就把主要精力放在大规模 AST 清洗上。
+The prerequisite is that page forensics and local reproduction are already basically working. Do not focus your main effort on large-scale AST cleaning before they work.

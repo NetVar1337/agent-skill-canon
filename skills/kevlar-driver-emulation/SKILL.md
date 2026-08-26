@@ -40,5 +40,32 @@ Patterned after **Kevlar** (Kernel Export Virtualization Layer And Runtime): map
 ## Local path
 `Documents/Kevlar` / https://github.com/NetVar1337/Kevlar
 
+## Stub inventory (what to synthesize first)
+| Kernel dependency | Stub behavior | Notes |
+|---|---|---|
+| `ExAllocatePool2/ExFreePoolWithTag` | malloc into emulated pool space; track tags | log tag histogram = allocation fingerprint |
+| `MmGetSystemRoutineAddress` | hash-table of exported names → stub or real | first DriverEntry call usually |
+| `IoCreateDevice` | fake DEVICE_OBJECT into synthetic namespace | record device name + extents |
+| `PsSetCreateProcessNotifyRoutine` etc. | record registration, invoke manually later | callback list = behavior map |
+| `RtlInitUnicodeString/RtlCompareMemory` | implement directly | trivial, do first |
+| `KeQueryInterruptTime/KeQueryTickCount` | controllable fake clock | determinism for replay |
+| CPUID/RDTSC/MSR | Unicorn hooks returning scripted values | environment-probe capture point |
+
+## IOCTL reconstruction workflow
+1. Emulate DriverEntry → capture device name + dispatch table fill (MajorFunction[IRP_MJ_DEVICE_CONTROL])
+2. Synthesize IRP: fixed fake IRP + IO_STACK_LOCATION with user-controlled IoCtlCode + InBuf/InBufLen/OutBuf/OutBufLen
+3. Sweep CTL codes: for each, run with canary buffers (0x41 fill, lengths 8..0x400 geometric) — crash (unmapped) = length/decode bug surfaced; log METHOD (buffered/direct/NEITHER) from code fields
+4. Re-run under coverage (Unicorn block hook) to extract handler CFG per IOCTL → feed IDA (`ida-reverse`) to name functions
+5. Double-fetch hunting: place InBuf in emulated user memory, mutate between reads via hook — METHOD_NEITHER handlers frequently re-read
+
+## Determinism & state snapshot
+- Seed all RNG hooks; snapshot full memory after DriverEntry; restore per IOCTL sweep run → reproducible traces (diffable with `binary-diff`).
+- Anti-emulation probes to expect: `KdDebuggerEnabled`, `SharedUserData->KdDebuggerEnabled`, NMI/INT3 self-checks, `DbgBreakPoint` with SEH — stub all to clean-kernel values.
+
+## Limits (when to go live/hypervisor instead)
+- No real DPC/timer/work-item execution — deferred work invisible; if driver arms a timer to complete setup, emulation sees half the story (`hypervisor-memory-introspection` for live-but-isolated).
+- SMP: single-vCPU Unicorn; drivers with per-core structures (GS/KPCR indexing) need KPCR per-core synth or patching.
+- Interrupts/IRQL semantics fake — real race bugs won't reproduce; IOCTL logic bugs will.
+
 ## Pair with
 `eac-kernel-driver-re`, `hypervisor-dev`, `ida-reverse`, `byovd`.

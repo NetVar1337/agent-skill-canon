@@ -43,3 +43,11 @@ When the user asks for strict TDD, the Iron Law applies: no production code
 without a failing test first, and you must watch each test fail before
 implementing. Full enforcement playbook, rationalization table, and completion
 checklist: [references/enforcement.md](references/enforcement.md).
+
+## Consolidated strict-cycle checks
+
+For a strict TDD request, watch the focused test fail for the expected missing behavior before writing production code. A test that passes immediately is either covering existing behavior or asserting the wrong seam; correct the test before implementation. Then write the smallest production change that passes it, re-run the focused test, and run the relevant suite once to catch regressions.
+
+Keep each cycle vertical: one behavior, one public seam, one failing test, and one minimal implementation. Do not retain or adapt prewritten production code as a reference during the cycle. Prefer real collaborators over mocks; when a mock is unavoidable, preserve the behavior the test is intended to prove. Refactor only after green and keep the tests green while doing so.
+
+Before completion, confirm that each new behavior had an observed RED result, its GREEN result is clean, expected values came from an independent source of truth, and test names describe user-observable behavior rather than implementation details.

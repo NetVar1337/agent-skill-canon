@@ -1,8 +1,8 @@
-# 回退策略
+# Fallback Strategy
 
-当当前路径无进展时按顺序回退：
+When the current path stalls, fall back in this order:
 
-1. 从断点回退到请求观察
-2. 从源码猜测回退到运行时证据
-3. 从 Node 补环境回退到页面取证
-4. 从深度去混淆回退到最小可复现链路
+1. From breakpoints back to request observation
+2. From source-code guessing back to runtime evidence
+3. From Node environment patching back to page forensics
+4. From deep deobfuscation back to the minimal reproducible chain

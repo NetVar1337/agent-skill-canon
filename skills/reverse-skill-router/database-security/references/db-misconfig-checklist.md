@@ -1,9 +1,9 @@
-# 数据库配置清单
+# Database Configuration Checklist
 
-- [ ] 监听地址与安全组
-- [ ] 默认账号/测试账号
-- [ ] 最小权限与角色分离
-- [ ] 危险存储过程/功能关闭
-- [ ] 加密连接与证书
-- [ ] 审计与告警
-- [ ] 备份访问控制
+- [ ] Listen addresses and security groups
+- [ ] Default accounts/test accounts
+- [ ] Least privilege and role separation
+- [ ] Dangerous stored procedures/features disabled
+- [ ] Encrypted connections and certificates
+- [ ] Auditing and alerting
+- [ ] Backup access controls

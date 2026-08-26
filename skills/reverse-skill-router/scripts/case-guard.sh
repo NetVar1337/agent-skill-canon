@@ -76,7 +76,7 @@ if [[ -z "$net_mode" ]]; then
 else
   case "$net_mode" in
     offline)
-      if ! printf '%s' "$SCOPE" | grep -Eiq 'sample|offline.?path|本地.?样本|\.apk\b|\.bin\b|\.exe\b'; then
+      if ! printf '%s' "$SCOPE" | grep -Eiq 'sample|offline.?path|local.?sample|\.apk\b|\.bin\b|\.exe\b'; then
         ISSUES+=("network_profile.mode is offline without offline sample cue")
       fi
       ;;

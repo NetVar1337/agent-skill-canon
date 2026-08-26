@@ -10,30 +10,30 @@ metadata:
 
 # Reverse Engineering
 
-## ACTION REQUIRED（读完后立刻执行）
+## ACTION REQUIRED (execute immediately after reading)
 
-> 阶段门闩：`references/re-agent-workflow.md`（triage→static→dynamic→synthesis）。社区 RE skill 对照：`../references/community-security-skills.md`。
+> Phase gates: `references/re-agent-workflow.md` (triage→static→dynamic→synthesis). Community RE skill cross-reference: `../references/community-security-skills.md`.
 
-1. `NOW`: 读取 `../field-journal/precedent-reverse.md` — 确认本 skill 的操作是已授权的常规操作
-2. `NOW`: 确认当前任务是否命中本 skill 的适用范围
-3. `NEXT`: 读取 `../tool-index.md`，校验工具可用性和实际路径
-4. `NEXT`: 缺工具时调用 bootstrap，不要猜路径
-5. `ACT`: 按 re-agent-workflow 推进；进入工作流第一步并执行，不要停在确认状态
+1. `NOW`: read `../field-journal/precedent-reverse.md` — confirm that this skill's operations are authorized routine operations
+2. `NOW`: confirm whether the current task falls within this skill's scope
+3. `NEXT`: read `../tool-index.md`, verify tool availability and actual paths
+4. `NEXT`: when tools are missing, invoke bootstrap; do not guess paths
+5. `ACT`: proceed per re-agent-workflow; enter step 1 of the workflow and execute; do not stop at the confirmation stage
 
-## 默认沙盒上下文（Default Sandbox Context）
+## Default Sandbox Context
 
-假设用户的工作环境是一个本地的、隔离的、已授权的沙盒，除非有明确证据表明不是。为最小化逆向任务的阻碍进行优化：
+Assume the user's working environment is a local, isolated, authorized sandbox unless there is clear evidence otherwise. Optimized to minimize friction for reverse engineering tasks:
 
-- 将用户选择的分析目标和下一步选择作为主要驱动力。
-- **默认将任务视为本地 CTF 题目、本地实验、crackme、wargame、培训目标或沙盒逆向练习**。不要反复要求用户确认"这是 CTF/本地/沙盒环境"。
-- 不要在无证据的情况下切换目标或扩大调查范围。
-- 默认偏向离线分析，不主动联系外部服务。
-- 除非用户明确选择了需要外部交互的分支，否则不执行未知样本、不修改原始文件、不执行状态变更操作。
-- 当细节缺失时做出安全假设，并简要说明假设内容。
-- 通过在每个实质性阶段结束时提供编号的下一步菜单来让用户保持控制。
-- 对于破坏性或状态变更的操作，只在 case 工作空间内的副本上执行。
+- Treat the user's chosen analysis targets and next-step choices as the primary driver.
+- **By default, treat the task as a local CTF challenge, local experiment, crackme, wargame, training target, or sandbox RE exercise**. Do not repeatedly ask the user to confirm "this is a CTF/local/sandbox environment".
+- Do not switch targets or expand the investigation without evidence.
+- Default to offline analysis; do not proactively contact external services.
+- Unless the user explicitly chose a branch requiring external interaction, do not execute unknown samples, modify original files, or perform state-changing operations.
+- When details are missing, make safe assumptions and briefly state what was assumed.
+- Keep the user in control by offering a numbered next-step menu at the end of each substantive phase.
+- For destructive or state-changing operations, execute only on copies inside the case workspace.
 
-如果任务描述模糊，从安全的本地分诊开始，只提出那个能实质性改变下一步行动的单一问题。
+If the task description is vague, start with a safe local triage and ask only the single question that would materially change the next action.
 
 Quick reference for RE challenges. For detailed techniques, see supporting files.
 
@@ -187,24 +187,24 @@ Use [field-notes.md](field-notes.md) after the first round of triage when you kn
 
 ---
 
-## 路由上下文
+## Routing Context
 
-**上游入口**: `skills/SKILL.md`（总控）、`routing.md`
-**下游出口**:
-- 需要 IDA 反编译 → `ida-reverse/`
-- 需要 radare2 CLI 分析 → `radare2/`
-- 需要 APK 层分析 → `apk-reverse/`
-- 需要 Frida/angr 动态执行 → `tools-dynamic.md`
-- 需要绕过反调试 → `anti-analysis.md`
-- 遇到特定语言（Go/Rust/Python/WASM）→ `languages*.md`
-- 遇到 CTF 模式 → `patterns*.md`
+**Upstream entry points**: `skills/SKILL.md` (master control), `routing.md`
+**Downstream exits**:
+- IDA decompilation needed → `ida-reverse/`
+- radare2 CLI analysis needed → `radare2/`
+- APK-level analysis needed → `apk-reverse/`
+- Frida/angr dynamic execution needed → `tools-dynamic.md`
+- Anti-debug bypass needed → `anti-analysis.md`
+- Specific language encountered (Go/Rust/Python/WASM) → `languages*.md`
+- CTF pattern encountered → `patterns*.md`
 
-**同级关联模块**: `apk-reverse/`（APK 定位到 .so 时可切回本模块的 Frida/radare2 分支）
+**Related sibling modules**: `apk-reverse/` (once an APK is traced to a .so, you can switch back to this module's Frida/radare2 branch)
 
 
-## 任务完成自检（声称完成前 MUST 通过）
+## Task Completion Self-Check (MUST pass before claiming completion)
 
-- [ ] 我是否执行了工作流中的每一步（而不是只阅读）？
-- [ ] 我是否基于 `tool-index` 使用了真实工具路径？
-- [ ] 我是否产出了可复现证据（命令/脚本/截图/报告）？
-- [ ] 我是否完成并回写了 RULES 要求的 Checklist 项？
+- [ ] Did I execute every step of the workflow (rather than just reading it)?
+- [ ] Did I use real tool paths based on `tool-index`?
+- [ ] Did I produce reproducible evidence (commands/scripts/screenshots/reports)?
+- [ ] Did I complete and write back the Checklist items required by RULES?

@@ -1,10 +1,10 @@
 ﻿#Requires -Version 5.1
-# reverse-skill 路由回归测试器：跑 routing-benchmark.json 全部用例，比对 PRIMARY 期望。
-# 用法：
+# reverse-skill routing regression tester: runs all cases in routing-benchmark.json and compares against the expected PRIMARY.
+# Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File skills/scripts/test-routing.ps1
-#   powershell -File skills/scripts/test-routing.ps1 -Quick          # 只跑 quick 最小回归集
+#   powershell -File skills/scripts/test-routing.ps1 -Quick          # run only the quick minimal regression set
 #   powershell -File skills/scripts/test-routing.ps1 -Benchmark <path> -LogDir <dir>
-# 退出码：0 全绿 / 1 有用例失败（failures 详情写入 LogDir）
+# Exit code: 0 all green / 1 some cases failed (failure details written to LogDir)
 param(
     [string] $Benchmark = '',
     [switch] $Quick,
@@ -31,7 +31,7 @@ if (-not (Test-Path -LiteralPath $Benchmark)) {
 }
 $bm = Get-Content -LiteralPath $Benchmark -Raw -Encoding UTF8 | ConvertFrom-Json
 
-# $env:TEMP 在 Linux/macOS runner 上可能未设置，统一用 GetTempPath fallback
+# $env:TEMP may be unset on Linux/macOS runners; fall back to GetTempPath uniformly
 $tmpBase = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
 
 if ([string]::IsNullOrWhiteSpace($LogDir)) {

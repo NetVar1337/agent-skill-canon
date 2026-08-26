@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
   "meta": {
-    "description": "reverse-skill 任务路由的单一事实源 (Single Source of Truth)。master-route.ps1 / verify-routing-coherence.ps1 / test-routing.ps1 / extract-summaries.ps1 均从此文件读取。修改路由规则请只改此文件，勿改散落在 markdown / ps1 里的路由表（文档由生成脚本维护，或至少与本站保持一致）。",
+    "description": "Single source of truth for reverse-skill task routing. master-route.ps1 / verify-routing-coherence.ps1 / test-routing.ps1 / extract-summaries.ps1 all read from this file. When changing routing rules, edit only this file — do not edit routing tables scattered across markdown / ps1 files (documentation is maintained by generation scripts, or must at least stay consistent with this file).",
     "fallbackId": "R0",
-    "scoring": "每条关键字规则命中后计入候选集；按 priority 数组顺序取『命中分数最高』的为 PRIMARY；分数并列时 priority 靠前者胜出；未命中任何规则时回退 fallbackId。",
+    "scoring": "Each matching keyword rule adds its route to the candidate set; the route with the highest hit score becomes PRIMARY, following priority-array order; on a score tie the route earlier in the priority array wins; when no rule matches, fall back to fallbackId.",
     "maintainers": [
-      "skills/MASTER-ROUTING.md 中的优先级表与此文件 priority 字段一一对应",
-      "skills/scripts/verify-routing-coherence.ps1 会校验二者一致性"
+      "The priority table in skills/MASTER-ROUTING.md maps one-to-one to the priority field in this file",
+      "skills/scripts/verify-routing-coherence.ps1 validates consistency between the two"
     ]
   },
   "routes": {
@@ -14,7 +14,7 @@
       "label": "APK reverse",
       "skill": "apk-reverse/SKILL.md",
       "keywords": [
-        { "must": "\\bapk\\b|smali|jadx|apktool|\\bandroid\\b|android.?reverse|安卓|反编译.?apk|apk.?加固|重打包|root.?detect|root.?检测|证书.?校验|certificate.?pinning|pinning.?绕过|签名.?校验", "note": "android 裸词/root 检测/证书校验/pinning 绕过 均为 APK 分析常见诉求" }
+        { "must": "\\bapk\\b|smali|jadx|apktool|\\bandroid\\b|android.?reverse|安卓|反编译.?apk|apk.?加固|重打包|root.?detect|root.?检测|证书.?校验|certificate.?pinning|pinning.?绕过|签名.?校验", "note": "Bare 'android' / root detection / certificate validation / pinning bypass are all common APK analysis requests" }
       ]
     },
     "R2": {
@@ -22,15 +22,15 @@
       "skill": "mobile-reverse/SKILL.md",
       "keywords": [
         { "must": "\\bipa\\b|ios.?reverse|objection|mobsf|mobile.?reverse|ios.?逆向" },
-        { "must": "越狱", "exclude": "模型|提示词|llm|prompt|jailbreak|garak|红队.?ai|ai.?红队", "note": "越狱 裸词分给 iOS 侧；LLM/模型上下文归 R14" },
-        { "must": "jailbreak", "mustAll": ["ios|iphone|ipad|mobile|objection|ipa"], "note": "jailbreak 仅当带 iOS 语境才归移动端" }
+        { "must": "越狱", "exclude": "模型|提示词|llm|prompt|jailbreak|garak|红队.?ai|ai.?红队", "note": "The bare jailbreak term routes to the iOS side; LLM/model contexts go to R14" },
+        { "must": "jailbreak", "mustAll": ["ios|iphone|ipad|mobile|objection|ipa"], "note": "'jailbreak' routes to mobile only when it comes with iOS context" }
       ]
     },
     "R3": {
       "label": "JS / frontend reverse",
       "skill": "js-reverse/SKILL.md",
       "keywords": [
-        { "must": "js.?reverse|webpack|cryptojs|frontend.?sign|jshook|cdp|encrypted.?param|前端.?签名|js.?逆向|加密.?参数|webpack.?逆向|抓包|http.?capture|请求.?重放|request.?replay|js.?加密|js.?解密|前端.?加密", "note": "抓包/HTTP 捕获/请求重放 属 JS 前端链路 (anything-analyzer)" }
+        { "must": "js.?reverse|webpack|cryptojs|frontend.?sign|jshook|cdp|encrypted.?param|前端.?签名|js.?逆向|加密.?参数|webpack.?逆向|抓包|http.?capture|请求.?重放|request.?replay|js.?加密|js.?解密|前端.?加密", "note": "Traffic capture / HTTP capture / request replay belong to the JS frontend chain (anything-analyzer)" }
       ]
     },
     "R4": {
@@ -51,7 +51,7 @@
       "label": "IDA reverse",
       "skill": "ida-reverse/SKILL.md",
       "keywords": [
-        { "must": "\\bida\\b|decompile|disassembl|反编译|反汇编|静态.?分析.?二进制|\\.so\\b|\\.elf\\b|so.?文件|native.?分析|jni", "note": ".so/.elf/native/JNI 分析归二进制静态分析（IDA/反汇编路线）" }
+        { "must": "\\bida\\b|decompile|disassembl|反编译|反汇编|静态.?分析.?二进制|\\.so\\b|\\.elf\\b|so.?文件|native.?分析|jni", "note": ".so/.elf/native/JNI analysis routes to binary static analysis (IDA/disassembly path)" }
       ]
     },
     "R7": {
@@ -74,7 +74,7 @@
       "skill": "malware-analysis/SKILL.md",
       "keywords": [
         { "must": "malware|yara|virus.?sample|pe-?sieve|cape.?sandbox|恶意.?软件|病毒.?样本|木马.?分析|恶意.?样本|样本.?分析|ransomware|勒索|webshell|后门|backdoor" },
-        { "must": "sandbox", "mustAll": ["malware|virus|恶意|木马|样本|cape|any\\.run|triage"], "note": "裸 sandbox 归 R9 需恶意语境（防误伤云沙箱/开发语境）" }
+        { "must": "sandbox", "mustAll": ["malware|virus|恶意|木马|样本|cape|any\\.run|triage"], "note": "Bare 'sandbox' routes to R9 only in a malicious context (avoids false positives from cloud-sandbox/dev contexts)" }
       ]
     },
     "R10": {
@@ -88,7 +88,7 @@
       "label": "Pentest tools",
       "skill": "pentest-tools/SKILL.md",
       "keywords": [
-        { "must": "nmap|nuclei|sqlmap|ffuf|pentest|src.?hunt|bug.?bounty|waf.?bypass|渗透.?测试|端口.?扫描|漏洞.?扫描|目录.?爆破|sql.?注入|众测|burp|burpsuite|intruder|repeater|metasploit|hashcat|hydra|gobuster|dirsearch|提权|privilege.?escalat|安全.?评估|security.?assess|风险.?评估|risk.?assess", "note": "burp 家族/常见渗透工具/提权/评估 归 R11" }
+        { "must": "nmap|nuclei|sqlmap|ffuf|pentest|src.?hunt|bug.?bounty|waf.?bypass|渗透.?测试|端口.?扫描|漏洞.?扫描|目录.?爆破|sql.?注入|众测|burp|burpsuite|intruder|repeater|metasploit|hashcat|hydra|gobuster|dirsearch|提权|privilege.?escalat|安全.?评估|security.?assess|风险.?评估|risk.?assess", "note": "The Burp family / common penetration tools / privilege escalation / assessments route to R11" }
       ]
     },
     "R12": {
@@ -96,7 +96,7 @@
       "skill": "api-security/SKILL.md",
       "keywords": [
         { "must": "graphql|bola|bfla|api.?secur|接口.?安全|越权|未授权.?访问|rest.?api.?secur" },
-        { "must": "\\boauth\\b", "exclude": "oauth2|oidc|saml|sso|openid|联邦|单点", "note": "OAuth 裸词分给 API；OIDC/SAML/SSO 归 R37" }
+        { "must": "\\boauth\\b", "exclude": "oauth2|oidc|saml|sso|openid|联邦|单点", "note": "Bare 'OAuth' is assigned to API security; OIDC/SAML/SSO route to R37" }
       ]
     },
     "R13": {
@@ -180,7 +180,7 @@
       "label": "Cloud / K8s",
       "skill": "cloud-k8s/SKILL.md",
       "keywords": [
-        { "must": "kubernetes|\\bk8s\\b|container.?escape|docker.?escape|kube-?bench|cloud.?secur|imds|169\\.254\\.169\\.254|容器.?逃逸|云.?安全|k8s.?渗透|s3|对象存储|存储桶", "note": "S3/对象存储归云安全" }
+        { "must": "kubernetes|\\bk8s\\b|container.?escape|docker.?escape|kube-?bench|cloud.?secur|imds|169\\.254\\.169\\.254|容器.?逃逸|云.?安全|k8s.?渗透|s3|对象存储|存储桶", "note": "S3 / object storage routes to cloud security" }
       ]
     },
     "R24": {
@@ -188,14 +188,14 @@
       "skill": "windows-ad/SKILL.md",
       "keywords": [
         { "must": "active.?directory|\\bad\\b.?cs|bloodhound|kerberoast|as-?rep|certipy|ntlm.?relay|dc.?sync|kerberos.?攻击|ad.?证书|impacket|mimikatz|secretsdump" },
-        { "must": "域.?渗透|域控", "exclude": "完整.?渗透|从外网|打到域控|attack.?chain|full.?pentest", "note": "完整渗透/打到域控 归 R10 攻击链" }
+        { "must": "域.?渗透|域控", "exclude": "完整.?渗透|从外网|打到域控|attack.?chain|full.?pentest", "note": "Full penetration / reaching the domain controller routes to the R10 attack chain" }
       ]
     },
     "R25": {
       "label": "Digital forensics",
       "skill": "digital-forensics/SKILL.md",
       "keywords": [
-        { "must": "forensic|volatility|memory.?dump|plaso|timeline.?explorer|取证|内存.?转储|应急.?响应.?取证|手机.?取证|磁盘.?取证|autopsy|sleuth|encase|dump.?内存|内存.?dump|应急.?响应|incident.?response", "note": "应急响应/内存转储归数字取证" }
+        { "must": "forensic|volatility|memory.?dump|plaso|timeline.?explorer|取证|内存.?转储|应急.?响应.?取证|手机.?取证|磁盘.?取证|autopsy|sleuth|encase|dump.?内存|内存.?dump|应急.?响应|incident.?response", "note": "Incident response / memory dumps route to digital forensics" }
       ]
     },
     "R26": {
@@ -216,7 +216,7 @@
       "label": "OT / ICS",
       "skill": "ot-ics/SKILL.md",
       "keywords": [
-        { "must": "\\bot\\b|\\bics\\b|scada|plc\\b|modbus|dnp3|s7comm|purdue|工控|工业.?控制|ot/?ics", "note": "\\bot\\b 词边界避免 forensics 误伤" }
+        { "must": "\\bot\\b|\\bics\\b|scada|plc\\b|modbus|dnp3|s7comm|purdue|工控|工业.?控制|ot/?ics", "note": "The \\bot\\b word boundary avoids false matches on 'forensics'" }
       ]
     },
     "R29": {
@@ -258,7 +258,7 @@
       "label": "Hardware / debug interfaces",
       "skill": "hardware-security/SKILL.md",
       "keywords": [
-        { "must": "uart|jtag|swd|debug.?pad|flashrom|硬件.?调试|串口.?shell|芯片.?提取|usb.?逆向|usb.?设备", "note": "USB 设备逆向归硬件调试接口" }
+        { "must": "uart|jtag|swd|debug.?pad|flashrom|硬件.?调试|串口.?shell|芯片.?提取|usb.?逆向|usb.?设备", "note": "USB device reverse engineering routes to hardware debug interfaces" }
       ]
     },
     "R35": {
@@ -286,7 +286,7 @@
       "label": "RF / SDR research",
       "skill": "radio-sdr/SKILL.md",
       "keywords": [
-        { "must": "\\bsdr\\b|hackrf|rtl-?sdr|gnu.?radio|\\burh\\b|射频|软件.?无线电|蓝牙|bluetooth|\\bble\\b", "note": "蓝牙/BLE 归射频研究" }
+        { "must": "\\bsdr\\b|hackrf|rtl-?sdr|gnu.?radio|\\burh\\b|射频|软件.?无线电|蓝牙|bluetooth|\\bble\\b", "note": "Bluetooth / BLE route to RF research" }
       ]
     },
     "R40": {
@@ -307,9 +307,9 @@
       "label": "General reverse-engineering",
       "skill": "reverse-engineering/SKILL.md",
       "keywords": [
-        { "must": "ollvm|anti-?debug|unicorn|angr|gdb|deobfuscat|控制流平坦|反调试|unity|il2cpp|游戏.?逆向|game.?reverse|anti-?cheat|反作弊", "note": "Unity/游戏逆向归通用逆向 (seed-014)" },
-        { "must": "frida", "exclude": "\\bapk\\b|smali|jadx|android|安卓", "note": "APK 语境下 frida 归 R1" },
-        { "must": "reverse|逆向", "exclude": "apk|js.?reverse|ios|mobile|\\.net|firmware|malware|安卓|固件|恶意|protocol|ghidra|extension|macos|mach|golang|rust|工控|厚客户端|取证|协议|扩展", "note": "泛逆向兜底；命中更具体域时让位" }
+        { "must": "ollvm|anti-?debug|unicorn|angr|gdb|deobfuscat|控制流平坦|反调试|unity|il2cpp|游戏.?逆向|game.?reverse|anti-?cheat|反作弊", "note": "Unity / game reverse engineering routes to general reverse engineering (seed-014)" },
+        { "must": "frida", "exclude": "\\bapk\\b|smali|jadx|android|安卓", "note": "In an APK context, frida routes to R1" },
+        { "must": "reverse|逆向", "exclude": "apk|js.?reverse|ios|mobile|\\.net|firmware|malware|安卓|固件|恶意|protocol|ghidra|extension|macos|mach|golang|rust|工控|厚客户端|取证|协议|扩展", "note": "Catch-all for generic reverse engineering; yields when a more specific domain matches" }
       ]
     }
   },

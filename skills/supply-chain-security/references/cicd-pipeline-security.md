@@ -1,98 +1,98 @@
-# CI/CD 管道安全审计
+# CI/CD Pipeline Security Audit
 
-## 管道攻击面
+## Pipeline Attack Surface
 
 ```text
-威胁模型（STRIDE）:
-□ 欺骗: 伪造构建/签名/来源
-□ 篡改: 修改源代码/构建产物/依赖
-□ 否认: 无审计日志的恶意操作
-□ 信息泄露: 管道日志/构建产物泄漏密钥
-□ 拒绝服务: 耗尽 CI 资源/破坏构建
-□ 权限提升: Runner 逃逸/密钥窃取
+Threat model (STRIDE):
+□ Spoofing: forged builds/signatures/provenance
+□ Tampering: modifying source code/build artifacts/dependencies
+□ Repudiation: malicious operations without audit logs
+□ Information disclosure: pipeline logs/build artifacts leaking secrets
+□ Denial of service: exhausting CI resources/breaking builds
+□ Elevation of privilege: runner escape/secret theft
 ```
 
-## 审计清单
+## Audit Checklist
 
-### 1. Pipeline as Code 配置
+### 1. Pipeline as Code configuration
 
 ```yaml
-# GitHub Actions 审计要点
-# ❌ 危险模式
+# GitHub Actions audit points
+# ❌ Dangerous pattern
 on:
-  pull_request_target:  # 可访问 secrets 的 PR 触发
+  pull_request_target:  # PR trigger with secrets access
     types: [opened]
 
-# ❌ 脚本注入
-- run: echo "${{ github.event.issue.title }}"  # 用户输入 → shell
+# ❌ Script injection
+- run: echo "${{ github.event.issue.title }}"  # user input → shell
 
-# ❌ 不受限的 token 权限
+# ❌ Unrestricted token permissions
 permissions: write-all
 
-# ✅ 安全模式
+# ✅ Safe pattern
 on:
-  pull_request:  # 无 secrets 访问
+  pull_request:  # no secrets access
     types: [opened]
 
-# ✅ 固定到 SHA
+# ✅ Pinned to SHA
 - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-# ✅ 最小权限
+# ✅ Least privilege
 permissions:
   contents: read
 ```
 
-### 2. 密钥管理
+### 2. Secret management
 
 ```bash
-# 扫描历史提交中的密钥
+# Scan historical commits for secrets
 gitleaks detect --source . --verbose
 trufflehog git file://. --only-verified
 
-# 检查 Actions Secrets 使用
+# Check Actions Secrets usage
 gh secret list
-# 确认: 无硬编码密钥、定期轮换、最小权限
+# Confirm: no hardcoded secrets, regular rotation, least privilege
 
-# 运行时密钥注入
-# ✅ 使用 OIDC 替代长期密钥
-# ✅ Secrets 仅在需要时暴露到特定步骤
+# Runtime secret injection
+# ✅ Use OIDC instead of long-lived secrets
+# ✅ Secrets exposed only to the specific steps that need them
 ```
 
-### 3. 构建完整性
+### 3. Build integrity
 
 ```bash
-# 构建溯源
-# 生成不可篡改的构建记录（SLSA L2+）
+# Build provenance
+# Generate tamper-proof build records (SLSA L2+)
 slsa-provenance generate --source . --output provenance.json
 
-# 产物签名
+# Artifact signing
 cosign sign-blob --key cosign.key artifact.tar.gz
 
-# 验证
+# Verify
 cosign verify-blob --key cosign.pub --signature artifact.tar.gz.sig artifact.tar.gz
 ```
 
-### 4. Runner 安全
+### 4. Runner security
 
 ```text
-□ 是否使用 GitHub-hosted runner？（推荐，每次全新环境）
-□ Self-hosted runner: 是否在隔离的 VM/容器中运行？
-□ 是否运行过 fork PR？（self-hosted runner 风险极高）
-□ Runner 是否有网络出站限制？
-□ 构建缓存是否可能跨构建泄漏？
+□ Using GitHub-hosted runners? (recommended, fresh environment each time)
+□ Self-hosted runners: running inside isolated VMs/containers?
+□ Have fork PRs ever run? (extremely high risk for self-hosted runners)
+□ Do runners have network egress restrictions?
+□ Could build caches leak across builds?
 ```
 
-### 5. 依赖拉取安全
+### 5. Dependency fetching security
 
 ```text
-□ npm: package-lock.json 是否提交？ 禁止 --force / --legacy-peer-deps
-□ pip: requirements.txt 是否冻结版本？ 禁止 pip install <未验证来源>
-□ Docker: FROM 是否固定 digest？ 禁止 latest tag
-□ Go: go.sum 是否提交？
-□ 私有包: 注册表认证是否用短期 token？
+□ npm: is package-lock.json committed? No --force / --legacy-peer-deps
+□ pip: is requirements.txt version-frozen? No pip install <unverified source>
+□ Docker: is FROM pinned to a digest? No latest tag
+□ Go: is go.sum committed?
+□ Private packages: does registry auth use short-lived tokens?
 ```
 
-## 自动化检查 Pipeline
+## Automated Checking Pipeline
 
 ```yaml
 # .github/workflows/supply-chain.yml

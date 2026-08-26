@@ -1,270 +1,270 @@
-# IDA Pro MCP 工具速查
+# IDA Pro MCP Tool Cheat Sheet
 
-> ida-pro-mcp 2.x 工具按功能分类，附常用参数和典型用法。
-> 服务器名：`idapro`，工具前缀：`idapro_*`，HTTP 模式运行。工具数随版本变化（约 66，含 `py_eval`）。
+> ida-pro-mcp 2.x tools grouped by function, with common parameters and typical usage.
+> Server name: `idapro`, tool prefix: `idapro_*`, running in HTTP mode. Tool count varies by version (about 66, including `py_eval`).
 
 ---
 
-## 启动与会话管理
+## Startup and Session Management
 
-### 服务器启动
+### Server Startup
 
 ```powershell
-# 启动 MCP HTTP 服务器（后台静默；健康则 OK:<n>:reuse）
+# Start the MCP HTTP server (silent background; if healthy, OK:<n>:reuse)
 powershell -File "scripts/start.ps1"
-# 输出 OK:<工具数> 表示就绪（约 66，含 py_eval）
+# Output OK:<tool count> means ready (about 66, including py_eval)
 
-# 打开目标文件（绕过 schema 校验）
+# Open the target file (bypasses schema validation)
 powershell -File "scripts/open.ps1" -Path "C:\target.exe"
-# 输出 OK:filename:session_id
+# Output OK:filename:session_id
 
-# 大文件/GUI 程序建议加超时
+# For large files/GUI programs, adding a timeout is recommended
 powershell -File "scripts/open.ps1" -Path "C:\big.exe" -TimeoutSeconds 600
 
-# 跳过自动分析（快速打开）
+# Skip auto-analysis (fast open)
 powershell -File "scripts/open.ps1" -Path "C:\huge.sys" -NoAutoAnalysis
 ```
 
-### 会话工具
+### Session Tools
 
-| 工具 | 用途 | 示例 |
+| Tool | Purpose | Example |
 |------|------|------|
-| `idapro_idb_list()` / HTTP `idb_list` | 列出所有 session | — |
-| `idapro_idb_open()` / HTTP `idb_open` | 打开数据库（优先用 `open.ps1`） | 大文件走脚本 |
-| `idapro_idb_save(path)` / HTTP `idb_save` | 保存数据库 | 保存分析进度 |
-| `idapro_idb_current()` | 当前绑定的 session（若版本提供） | — |
-| `idapro_idb_switch(session_id)` | 切换 session | 多文件对比时 |
-| `idapro_idb_close(session_id)` | 关闭 session | 释放资源 |
-| `idapro_server_health()` | 服务器健康检查 | — |
-| `idapro_server_warmup()` | 预热子系统 | 首次使用前 |
+| `idapro_idb_list()` / HTTP `idb_list` | List all sessions | — |
+| `idapro_idb_open()` / HTTP `idb_open` | Open a database (prefer `open.ps1`) | Use the script for large files |
+| `idapro_idb_save(path)` / HTTP `idb_save` | Save the database | Save analysis progress |
+| `idapro_idb_current()` | Currently bound session (if provided by the version) | — |
+| `idapro_idb_switch(session_id)` | Switch session | When comparing multiple files |
+| `idapro_idb_close(session_id)` | Close a session | Free resources |
+| `idapro_server_health()` | Server health check | — |
+| `idapro_server_warmup()` | Warm up subsystems | Before first use |
 
 ---
 
-## 第一步：全局概览
+## Step One: Global Overview
 
-### survey_binary — 快速概况
+### survey_binary — Quick Summary
 
 ```
 idapro_survey_binary(detail_level="minimal")
 ```
 
-返回：
-- 架构（x86/x64/ARM/MIPS）
-- 入口点
-- 函数总数
-- 字符串统计
-- 段信息
-- 导入分类（加密/网络/文件IO/注册表）
-- 高 xref 热门函数
+Returns:
+- Architecture (x86/x64/ARM/MIPS)
+- Entry point
+- Total function count
+- String statistics
+- Segment info
+- Import classification (crypto/network/file IO/registry)
+- Top functions by xrefs
 
-**detail_level 选项**：
-- `"minimal"` — 快速概况（推荐首选）
-- `"standard"` — 包含更多细节
-- `"full"` — 完整信息
+**detail_level options**:
+- `"minimal"` — quick summary (recommended first choice)
+- `"standard"` — includes more detail
+- `"full"` — complete information
 
-### 函数列表
+### Function Listing
 
 ```
-# 列出所有函数（分页）
+# List all functions (paginated)
 idapro_list_funcs(queries=[{"offset": 0, "limit": 50}])
 
-# 按名称过滤
+# Filter by name
 idapro_list_funcs(queries=[{"filter": "crypt", "offset": 0, "limit": 20}])
 idapro_list_funcs(queries=[{"filter": "main", "offset": 0, "limit": 10}])
 ```
 
-### 统一查询
+### Unified Query
 
 ```
-# 查询导入函数
+# Query imported functions
 idapro_entity_query(kind="imports", filter="Create")
 
-# 查询字符串
+# Query strings
 idapro_entity_query(kind="strings", filter="http")
 
-# 查询所有命名符号
+# Query all named symbols
 idapro_entity_query(kind="names", filter="")
 ```
 
 ---
 
-## 反编译与反汇编
+## Decompilation and Disassembly
 
-### 反编译（伪代码）
+### Decompile (pseudocode)
 
 ```
-# 按函数名
+# By function name
 idapro_decompile(addr="main")
 idapro_decompile(addr="sub_140001000")
 
-# 按地址
+# By address
 idapro_decompile(addr="0x140001000")
 ```
 
-### 反汇编
+### Disassemble
 
 ```
-# 默认指令数
+# Default instruction count
 idapro_disasm(addr="main")
 
-# 指定指令数量
+# Specify instruction count
 idapro_disasm(addr="0x401000", max_instructions=100)
 ```
 
-### 综合分析（推荐）
+### Comprehensive Analysis (recommended)
 
 ```
-# 一次性获取：伪代码 + 字符串 + 常量 + 调用者 + 被调用者 + 基本块
+# Get in one shot: pseudocode + strings + constants + callers + callees + basic blocks
 idapro_analyze_function(addr="main", include_asm=false)
 
-# 包含汇编
+# Include assembly
 idapro_analyze_function(addr="sub_401000", include_asm=true)
 ```
 
-### 函数概要
+### Function Profile
 
 ```
-# 批量获取函数指标（大小、块数、xref 数）
+# Batch retrieve function metrics (size, block count, xref count)
 idapro_func_profile(queries=["main", "sub_401000", "sub_402000"])
 ```
 
 ---
 
-## 交叉引用与调用图
+## Cross References and Call Graphs
 
-### 谁引用了目标
+### Who References the Target
 
 ```
-# 查看谁调用了某函数
+# See who calls a function
 idapro_xrefs_to(addrs=["sub_401000"])
 
-# 查看谁引用了某字符串/数据
+# See who references a string/data item
 idapro_xrefs_to(addrs=["0x404000"])
 
-# 批量查询
+# Batch query
 idapro_xrefs_to(addrs=["CreateFileW", "ReadFile", "WriteFile"])
 ```
 
-### 高级 xref 查询
+### Advanced xref Query
 
 ```
-# 指定方向和类型
-idapro_xref_query(addr="0x401000", direction="to")    # 谁引用我
-idapro_xref_query(addr="0x401000", direction="from")  # 我引用谁
+# Specify direction and type
+idapro_xref_query(addr="0x401000", direction="to")    # who references me
+idapro_xref_query(addr="0x401000", direction="from")  # who I reference
 ```
 
-### 被调用函数列表
+### Callee List
 
 ```
 idapro_callees(addrs=["main"])
 ```
 
-### 调用图
+### Call Graph
 
 ```
-# 从 main 开始，深度 3
+# Start from main, depth 3
 idapro_callgraph(roots=["main"], max_depth=3)
 
-# 多个起点
+# Multiple roots
 idapro_callgraph(roots=["sub_401000", "sub_402000"], max_depth=2)
 ```
 
-### 数据流追踪
+### Data Flow Tracing
 
 ```
-# 向后追踪：这个值从哪来
+# Trace backward: where does this value come from
 idapro_trace_data_flow(addr="0x401050", direction="backward", max_depth=5)
 
-# 向前追踪：这个值流向哪里
+# Trace forward: where does this value go
 idapro_trace_data_flow(addr="0x401050", direction="forward", max_depth=5)
 ```
 
 ---
 
-## 搜索
+## Search
 
-### 字符串搜索（正则）
+### String Search (regex)
 
 ```
-# 搜索 URL
+# Search for URLs
 idapro_find_regex(pattern="https?://", limit=20)
 
-# 搜索文件路径
+# Search for file paths
 idapro_find_regex(pattern="C:\\\\", limit=20)
 
-# 搜索错误信息
+# Search for error messages
 idapro_find_regex(pattern="error|fail|invalid", limit=30)
 
-# 搜索密钥/密码相关
+# Search for key/password related items
 idapro_find_regex(pattern="key|password|secret|token", limit=20)
 ```
 
-### 反汇编文本搜索
+### Disassembly Text Search
 
 ```
-# 在反汇编列表中搜索
+# Search within the disassembly listing
 idapro_search_text(pattern="call    sub_")
 idapro_search_text(pattern="xor     eax, eax")
 ```
 
-### 字节模式搜索
+### Byte Pattern Search
 
 ```
-# 精确字节
+# Exact bytes
 idapro_find_bytes(patterns=["48 8B 05"], limit=10)
 
-# 带通配符
+# With wildcards
 idapro_find_bytes(patterns=["48 89 ?? 24 ??"], limit=10)
 
-# 多个模式
+# Multiple patterns
 idapro_find_bytes(patterns=["CC CC CC CC", "90 90 90 90"], limit=5)
 ```
 
-### 高级搜索
+### Advanced Search
 
 ```
-# 搜索立即数
+# Search for immediates
 idapro_find(type="immediate", targets=["0xDEADBEEF"])
 
-# 搜索字符串引用
+# Search for string references
 idapro_find(type="string", targets=["password"])
 ```
 
 ---
 
-## 内存与数据读取
+## Memory and Data Reading
 
-### 读原始字节
+### Read Raw Bytes
 
 ```
 idapro_get_bytes(addrs=[{"addr": "0x401000", "size": 64}])
 ```
 
-### 读字符串
+### Read Strings
 
 ```
 idapro_get_string(addrs=["0x404000", "0x404100"])
 ```
 
-### 读整数
+### Read Integers
 
 ```
 idapro_get_int(queries=[{"addr": "0x405000", "size": 4}])
 ```
 
-### 读全局变量
+### Read Global Variables
 
 ```
 idapro_get_global_value(queries=["g_flag", "g_key_size"])
 ```
 
-### 读结构体
+### Read Structures
 
 ```
 idapro_read_struct(queries=[{"addr": "0x405000", "type": "HEADER"}])
 ```
 
-### 搜索结构体
+### Search Structures
 
 ```
 idapro_search_structs(filter="FILE")
@@ -272,73 +272,73 @@ idapro_search_structs(filter="FILE")
 
 ---
 
-## 修改操作
+## Modification Operations
 
-### 添加注释
+### Add Comments
 
 ```
-# 单个注释
-idapro_set_comments(items=[{"addr": "0x401000", "comment": "解密函数入口"}])
+# Single comment
+idapro_set_comments(items=[{"addr": "0x401000", "comment": "decryption function entry"}])
 
-# 批量注释
+# Batch comments
 idapro_set_comments(items=[
-    {"addr": "0x401000", "comment": "XOR 解密循环"},
-    {"addr": "0x401050", "comment": "密钥初始化"},
-    {"addr": "0x4010A0", "comment": "结果校验"}
+    {"addr": "0x401000", "comment": "XOR decryption loop"},
+    {"addr": "0x401050", "comment": "key initialization"},
+    {"addr": "0x4010A0", "comment": "result validation"}
 ])
 
-# 追加注释（不覆盖已有）
-idapro_append_comments(items=[{"addr": "0x401000", "comment": "补充：密钥长度 16"}])
+# Append comment (does not overwrite existing)
+idapro_append_comments(items=[{"addr": "0x401000", "comment": "addendum: key length 16"}])
 ```
 
-### 重命名
+### Rename
 
 ```
-# 重命名函数
+# Rename functions
 idapro_rename(batch={"func": [
     {"addr": "sub_401000", "name": "decrypt_payload"},
     {"addr": "sub_402000", "name": "verify_license"}
 ]})
 
-# 重命名全局变量
+# Rename global variables
 idapro_rename(batch={"global": [
     {"addr": "0x405000", "name": "g_encryption_key"}
 ]})
 
-# 重命名局部变量
+# Rename local variables
 idapro_rename(batch={"local": [
     {"func": "decrypt_payload", "old": "v1", "name": "plaintext_buf"}
 ]})
 ```
 
-### Patch 汇编
+### Patch Assembly
 
 ```
-# NOP 掉检测代码
+# NOP out detection code
 idapro_patch_asm(items=[{"addr": "0x401050", "asm": "nop"}])
 
-# 修改跳转
+# Modify a jump
 idapro_patch_asm(items=[{"addr": "0x401060", "asm": "jmp 0x401080"}])
 
-# 强制返回 true
+# Force return true
 idapro_patch_asm(items=[
     {"addr": "0x401000", "asm": "mov eax, 1"},
     {"addr": "0x401005", "asm": "ret"}
 ])
 ```
 
-### Patch 字节
+### Patch Bytes
 
 ```
-# 直接写字节
+# Write bytes directly
 idapro_patch(patches=[{"addr": "0x401050", "bytes": "9090909090"}])
 ```
 
 ---
 
-## 类型系统
+## Type System
 
-### 声明结构体
+### Declare a Structure
 
 ```
 idapro_declare_type(decls=[{
@@ -347,29 +347,29 @@ idapro_declare_type(decls=[{
 }])
 ```
 
-### 应用类型
+### Apply a Type
 
 ```
-# 给函数设置原型
+# Set a prototype for a function
 idapro_set_type(edits=[{
     "addr": "sub_401000",
     "type": "int __fastcall decrypt(void *buf, int size, const char *key)"
 }])
 
-# 给全局变量设置类型
+# Set a type for a global variable
 idapro_set_type(edits=[{
     "addr": "0x405000",
     "type": "PacketHeader"
 }])
 ```
 
-### 推断类型
+### Infer Types
 
 ```
 idapro_infer_types(addrs=["sub_401000", "sub_402000"])
 ```
 
-### 查询/查看类型
+### Query/Inspect Types
 
 ```
 idapro_type_query(queries=["Packet"])
@@ -378,13 +378,13 @@ idapro_type_inspect(queries=["PacketHeader"])
 
 ---
 
-## 栈帧分析
+## Stack Frame Analysis
 
 ```
-# 查看函数栈帧
+# View a function's stack frame
 idapro_stack_frame(addrs=["main", "sub_401000"])
 
-# 声明栈变量
+# Declare a stack variable
 idapro_declare_stack(items=[{
     "func": "sub_401000",
     "offset": -0x20,
@@ -395,121 +395,121 @@ idapro_declare_stack(items=[{
 
 ---
 
-## 签名生成
+## Signature Generation
 
 ```
-# 为地址生成唯一字节签名
+# Generate a unique byte signature for an address
 idapro_make_signature(addrs=["0x401000"])
 
-# 为整个函数生成签名
+# Generate a signature for an entire function
 idapro_make_signature_for_function(addrs=["decrypt_payload"])
 
-# 为引用某地址的代码生成签名
+# Generate signatures for code that references an address
 idapro_find_xref_signatures(addrs=["0x405000"])
 ```
 
 ---
 
-## 进制转换
+## Base Conversion
 
 ```
-# 十六进制 → 十进制
+# Hex → decimal
 idapro_int_convert(inputs=["0x401000"])
 
-# 十进制 → 十六进制
+# Decimal → hex
 idapro_int_convert(inputs=["4198400"])
 
-# 批量转换
+# Batch conversion
 idapro_int_convert(inputs=["0xDEAD", "0xBEEF", "12345"])
 ```
 
-> ⚠️ **永远用这个工具做进制转换，不要自己算！**
+> ⚠️ **Always use this tool for base conversion — never calculate it yourself!**
 
 ---
 
-## 导出与脚本
+## Export and Scripting
 
-### 导出函数
+### Export Functions
 
 ```
-# JSON 格式
+# JSON format
 idapro_export_funcs(addrs=["main", "sub_401000"], format="json")
 
-# C 头文件
+# C header
 idapro_export_funcs(addrs=["main", "sub_401000"], format="c_header")
 
-# 函数原型
+# Function prototypes
 idapro_export_funcs(addrs=["main", "sub_401000"], format="prototypes")
 ```
 
-### 执行 Python 脚本
+### Execute Python Scripts
 
 ```
-# 在 IDA 上下文中执行 Python
+# Execute Python in the IDA context
 idapro_py_eval(code="import idautils; print(list(idautils.Functions())[:10])")
 
-# 获取段信息
+# Get segment info
 idapro_py_eval(code="import idc; print(idc.get_segm_name(0x401000))")
 
-# 批量操作
+# Batch operations
 idapro_py_eval(code="import ida_funcs; f=ida_funcs.get_func(0x401000); print(f.size())")
 ```
 
 ---
 
-## 典型分析流程
+## Typical Analysis Workflows
 
-### 恶意软件分析
+### Malware Analysis
 
 ```text
-1. survey_binary → 看导入（网络API? 加密? 注册表?）
-2. find_regex("http|socket|connect") → 找网络相关字符串
-3. xrefs_to(网络字符串地址) → 找引用函数
-4. decompile(引用函数) → 看通信逻辑
-5. trace_data_flow(加密参数, "backward") → 追踪密钥来源
-6. set_comments + rename → 标注发现
+1. survey_binary → check imports (network APIs? crypto? registry?)
+2. find_regex("http|socket|connect") → find network-related strings
+3. xrefs_to(network string addresses) → find referencing functions
+4. decompile(referencing functions) → examine communication logic
+5. trace_data_flow(crypto parameters, "backward") → trace key origin
+6. set_comments + rename → annotate findings
 ```
 
-### 注册验证破解
+### Registration Validation Crack
 
 ```text
-1. find_regex("serial|license|register|valid") → 找验证相关字符串
-2. xrefs_to(验证字符串) → 定位验证函数
-3. analyze_function(验证函数) → 理解逻辑
-4. callgraph(验证函数, 2) → 看调用链
-5. patch_asm(条件跳转地址, "jmp always_pass") → patch
+1. find_regex("serial|license|register|valid") → find validation-related strings
+2. xrefs_to(validation strings) → locate the validation function
+3. analyze_function(validation function) → understand the logic
+4. callgraph(validation function, 2) → examine the call chain
+5. patch_asm(conditional jump address, "jmp always_pass") → patch
 ```
 
-### CTF 逆向
+### CTF Reverse Engineering
 
 ```text
-1. survey_binary → 确认架构和入口
-2. decompile("main") → 看主逻辑
-3. find_regex("flag|correct|wrong") → 找判断点
-4. trace_data_flow(判断点, "backward") → 追踪输入变换
-5. 用 Python 辅助计算/解密 → 得到 flag
+1. survey_binary → confirm architecture and entry
+2. decompile("main") → examine main logic
+3. find_regex("flag|correct|wrong") → find the decision points
+4. trace_data_flow(decision points, "backward") → trace input transformation
+5. Use Python to assist computation/decryption → obtain the flag
 ```
 
-### 漏洞分析
+### Vulnerability Analysis
 
 ```text
-1. entity_query(kind="imports", filter="strcpy|sprintf|gets") → 找危险函数
-2. xrefs_to(危险函数) → 找调用点
-3. analyze_function(调用点所在函数) → 看上下文
-4. stack_frame(函数) → 确认缓冲区大小
-5. trace_data_flow(危险参数, "backward") → 确认用户可控
+1. entity_query(kind="imports", filter="strcpy|sprintf|gets") → find dangerous functions
+2. xrefs_to(dangerous functions) → find call sites
+3. analyze_function(function containing the call site) → examine the context
+4. stack_frame(function) → confirm buffer size
+5. trace_data_flow(dangerous parameters, "backward") → confirm user controllability
 ```
 
 ---
 
-## 常见错误与解决
+## Common Errors and Solutions
 
-| 错误 | 原因 | 解决 |
+| Error | Cause | Solution |
 |------|------|------|
-| "No database bound" | 没有打开文件 | 执行 `open.ps1` |
-| "Failed to open database" | 旧库被锁 | `open.ps1` 自动降级到 Temp |
-| schema 校验失败 | MCP 客户端 BUG | 用 `open.ps1` 代替 `idb_open` |
-| 工具超时 | 大文件分析中 | 加 `-TimeoutSeconds 600` |
-| "ERR:timeout" (start.ps1) | 服务器启动失败 | 检查 Python/idalib-mcp 安装 |
-| 进制转换错误 | 手动计算出错 | 用 `idapro_int_convert` |
-| 函数名找不到 | 名称不精确 | 用 `list_funcs` + filter 先搜索 |
+| "No database bound" | No file opened | Run `open.ps1` |
+| "Failed to open database" | Old database is locked | `open.ps1` automatically falls back to Temp |
+| schema validation failure | MCP client bug | Use `open.ps1` instead of `idb_open` |
+| tool timeout | Large file still analyzing | Add `-TimeoutSeconds 600` |
+| "ERR:timeout" (start.ps1) | Server failed to start | Check Python/idalib-mcp installation |
+| base conversion error | Manual calculation mistake | Use `idapro_int_convert` |
+| function name not found | Inexact name | Search first with `list_funcs` + filter |

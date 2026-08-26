@@ -1,12 +1,12 @@
-# AD 攻击路径速查
+# AD Attack Path Quick Reference
 
-| 路径 | 前提 | 工具线索 |
+| Path | Prerequisite | Tool hints |
 |------|------|----------|
-| Kerberoast | SPN 账户 | GetUserSPNs / Rubeus |
-| AS-REP Roast | 不要求预认证 | GetNPUsers |
-| ESC1 | 可注册模板 + 可伪造SAN | Certipy |
-| ESC8 | HTTP enrollment + 中继 | ntlmrelayx |
+| Kerberoast | SPN account | GetUserSPNs / Rubeus |
+| AS-REP Roast | Pre-authentication not required | GetNPUsers |
+| ESC1 | Enrollable template + forgeable SAN | Certipy |
+| ESC8 | HTTP enrollment + relay | ntlmrelayx |
 | ACL → DA | GenericAll on user/group | BloodHound |
-| NTLM Relay | 签名未强制 | Responder + relay |
+| NTLM Relay | Signing not enforced | Responder + relay |
 
-始终：授权 → 枚举 → 路径评分 → 最小验证 → 清理。
+Always: authorization → enumeration → path scoring → minimal validation → cleanup.

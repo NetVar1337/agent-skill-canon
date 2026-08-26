@@ -1,242 +1,242 @@
 ---
 name: browser-automation
 description: |
-  统一自动化入口。覆盖浏览器自动化（Playwright）和 Windows 桌面应用自动化（OpenReverse）。
-  浏览器场景：打开网页、点击、填表、爬取、截图、自动化登录、渗透页面交互。
-  桌面场景：操作 IDA/x64dbg 等 GUI 工具、Windows UI Automation、视觉驱动交互、桌面应用网络抓包。
-  触发关键词：浏览器自动化、桌面自动化、打开网页、填表、爬取、截图、自动化登录、Playwright、agent-browser、headless、OpenReverse、UIA、CUA、桌面操作、Windows 自动化。
+  Unified automation entry point. Covers browser automation (Playwright) and Windows desktop application automation (OpenReverse).
+  Browser scenarios: opening web pages, clicking, filling forms, crawling, screenshots, automated login, pentest page interaction.
+  Desktop scenarios: operating GUI tools like IDA/x64dbg, Windows UI Automation, vision-driven interaction, desktop application traffic capture.
+  Trigger keywords: browser automation, desktop automation, open web page, fill form, crawl, screenshot, automated login, Playwright, agent-browser, headless, OpenReverse, UIA, CUA, desktop operation, Windows automation.
 ---
 
-# 自动化操作 (Desktop & Browser Automation)
+# Automation Operations (Desktop & Browser Automation)
 
-## ACTION REQUIRED（读完后立刻执行）
+## ACTION REQUIRED (execute immediately after reading)
 
-1. `NOW`：确认当前任务是否命中本 skill 的适用范围
-2. `NOW`：读取 `../tool-index.md`，校验工具可用性和实际路径
-3. `NEXT`：缺工具时调用 bootstrap，不要猜路径
-4. `ACT`：进入"工作流"第一步并执行，不要停在确认状态
+1. `NOW`: confirm whether the current task falls within this skill's scope
+2. `NOW`: read `../tool-index.md`, verify tool availability and actual paths
+3. `NEXT`: when tools are missing, invoke bootstrap; do not guess paths
+4. `ACT`: enter step 1 of the "Workflow" and execute; do not stop at the confirmation stage
 
-## 适用范围
+## Scope
 
-当任务属于以下场景时使用本 skill：
+Use this skill when the task falls into one of these scenarios:
 
-### 浏览器场景（Playwright / agent-browser）
-- 打开网页并操作页面元素（点击、填表、提交）
-- 爬取页面内容或截图
-- 自动化登录流程
-- 渗透测试中与 Web 页面交互（提交 payload、触发 XSS）
-- 验证码页面的自动化处理
-- 批量表单提交
+### Browser Scenarios (Playwright / agent-browser)
+- Opening web pages and operating page elements (clicking, filling forms, submitting)
+- Crawling page content or taking screenshots
+- Automating login flows
+- Interacting with web pages during penetration testing (submitting payloads, triggering XSS)
+- Automated handling of CAPTCHA pages
+- Bulk form submission
 
-### 桌面应用场景（OpenReverse）
-- 操作 Windows 桌面应用（IDA Pro、x64dbg、Wireshark 等）
-- 需要视觉驱动交互（CUA 模式）
-- 需要结构化 UI 操作（UIA 模式）
-- 桌面应用的网络流量观察（内置 mitmproxy）
-- 自动化逆向工具的 GUI 操作
-- 黑盒测试桌面软件
+### Desktop Application Scenarios (OpenReverse)
+- Operating Windows desktop applications (IDA Pro, x64dbg, Wireshark, etc.)
+- Vision-driven interaction needed (CUA mode)
+- Structured UI operations needed (UIA mode)
+- Network traffic observation of desktop applications (built-in mitmproxy)
+- Automated GUI operation of reverse engineering tools
+- Black-box testing of desktop software
 
-### 与其他工具的分工
+### Division of Labor with Other Tools
 
-| 场景 | 用什么 |
+| Scenario | Use |
 |------|--------|
-| 操作网页（浏览器内） | **Playwright / agent-browser** |
-| 操作桌面应用（Windows GUI） | **OpenReverse** |
-| 抓包分析、HTTP 请求捕获 | anything-analyzer 或 OpenReverse network lane |
-| JS 断点、Hook、CDP 调试 | jshookmcp |
-| 定位签名算法、补环境复现 | js-reverse |
+| Operating web pages (inside the browser) | **Playwright / agent-browser** |
+| Operating desktop applications (Windows GUI) | **OpenReverse** |
+| Traffic capture analysis, HTTP request capture | anything-analyzer or OpenReverse network lane |
+| JS breakpoints, hooks, CDP debugging | jshookmcp |
+| Locating signature algorithms, environment-patched reproduction | js-reverse |
 
-简单判断：
-- 目标是网页 → Playwright
-- 目标是 Windows 桌面应用 → OpenReverse
-- 两者都需要 → 组合使用
+Simple rule:
+- Target is a web page → Playwright
+- Target is a Windows desktop application → OpenReverse
+- Both needed → combine them
 
 ---
 
-## Part 1: 浏览器自动化（Playwright / agent-browser）
+## Part 1: Browser Automation (Playwright / agent-browser)
 
-### 核心工作流
+### Core Workflow
 
 ```bash
-# 1. 打开页面
+# 1. Open a page
 agent-browser open <url>
 
-# 2. 获取可交互元素（返回 @e1, @e2... 引用）
+# 2. Get interactable elements (returns @e1, @e2... references)
 agent-browser snapshot -i
 
-# 3. 用引用操作元素
+# 3. Operate elements via references
 agent-browser click @e1
 agent-browser fill @e2 "text"
 
-# 4. 完成后关闭
+# 4. Close when done
 agent-browser close
 ```
 
-### 命令参考
+### Command Reference
 
 ```bash
-# 导航
+# Navigation
 agent-browser open <url>
 agent-browser close
 
-# 页面快照
-agent-browser snapshot        # 完整无障碍树
-agent-browser snapshot -i     # 仅可交互元素（推荐）
+# Page snapshot
+agent-browser snapshot        # full accessibility tree
+agent-browser snapshot -i     # interactable elements only (recommended)
 
-# 交互操作
+# Interaction
 agent-browser click @e1
 agent-browser fill @e2 "text"
 agent-browser type @e2 "text"
 agent-browser press Enter
 agent-browser scroll down 500
 
-# 获取信息
+# Get information
 agent-browser get text @e1
 agent-browser get title
 agent-browser get url
 
-# 等待
+# Waiting
 agent-browser wait @e1
 agent-browser wait 2000
 agent-browser wait --load networkidle
 ```
 
-### 注意事项
-- 必须执行 `agent-browser close`，否则进程泄漏
-- 操作前先 snapshot，不要猜元素引用
-- 提交表单后用 `wait --load networkidle` 等页面稳定
+### Notes
+- You must run `agent-browser close`, otherwise processes leak
+- Snapshot before operating; do not guess element references
+- After submitting a form, use `wait --load networkidle` to let the page settle
 
 ---
 
-## Part 2: 桌面应用自动化（OpenReverse）
+## Part 2: Desktop Application Automation (OpenReverse)
 
-### 概述
+### Overview
 
-[OpenReverse](https://github.com/zhexulong/openreverse) 是面向 AI Agent 的桌面交互与证据采集框架，支持：
-- **UIA 模式**：Windows UI Automation，结构化桌面控件操作
-- **CUA 模式**：视觉驱动交互（Computer Use Agent），适合复杂 GUI
-- **网络观察**：内置 mitmproxy 代理 + 本地抓取
+[OpenReverse](https://github.com/zhexulong/openreverse) is a desktop interaction and evidence-collection framework for AI agents, supporting:
+- **UIA mode**: Windows UI Automation, structured desktop control operations
+- **CUA mode**: vision-driven interaction (Computer Use Agent), suited for complex GUIs
+- **Network observation**: built-in mitmproxy proxy + local capture
 
-### 交互模式选择
+### Interaction Mode Selection
 
-| 模式 | 适合场景 | 底层 |
+| Mode | Suited Scenario | Underlying |
 |------|---------|------|
-| UIA | 目标应用有标准 Windows 控件（按钮、文本框、列表） | Windows UI Automation API |
-| CUA | 目标应用 UI 复杂或非标准控件（IDA 的反汇编视图、自定义渲染界面） | 视觉识别 + 鼠标键盘 |
+| UIA | Target app has standard Windows controls (buttons, text boxes, lists) | Windows UI Automation API |
+| CUA | Target app has a complex UI or non-standard controls (IDA's disassembly view, custom-rendered interfaces) | Vision recognition + mouse/keyboard |
 
-### 网络观察模式
+### Network Observation Modes
 
-| 模式 | 适合场景 |
+| Mode | Suited Scenario |
 |------|---------|
-| Proxy Lane | 目标应用可以配置代理（推荐） |
-| Local Lane | 目标应用无法走代理，需要本地抓取 |
+| Proxy Lane | Target app can be configured with a proxy (recommended) |
+| Local Lane | Target app cannot go through a proxy; local capture needed |
 
-### 安装与配置
+### Installation and Configuration
 
 ```bash
-# 1. Clone 项目
+# 1. Clone the project
 git clone https://github.com/zhexulong/openreverse.git
 cd openreverse
 
-# 2. 安装依赖
+# 2. Install dependencies
 npm install
 
-# 3. 接入 Agent 宿主（Claude Code / Codex / Zed）
+# 3. Hook into agent hosts (Claude Code / Codex / Zed)
 npm run init:agents -- --target=all /path/to/project
 
-# 4. 安装 CUA runtime（如果需要视觉驱动模式）
+# 4. Install the CUA runtime (if vision-driven mode is needed)
 npm run install:cua-runtime
 npm run doctor:cua-runtime
 
-# 5. 安装网络观察依赖（如果需要抓包）
+# 5. Install network observation dependencies (if traffic capture is needed)
 npm run install:mitmproxy
 npm run doctor:network
 ```
 
-### 常见组合
+### Common Combinations
 
-| 需求 | 配置 |
+| Need | Configuration |
 |------|------|
-| 只操作桌面应用 | UIA 或 CUA，不接网络 lane |
-| 操作桌面应用 + 抓包 | UIA/CUA + proxy lane |
-| 操作桌面应用 + 本地抓取 | UIA/CUA + local lane |
+| Only operate desktop applications | UIA or CUA, no network lane |
+| Operate desktop apps + capture traffic | UIA/CUA + proxy lane |
+| Operate desktop apps + local capture | UIA/CUA + local lane |
 
-### 逆向场景示例
+### Reverse Engineering Scenario Examples
 
 ```text
-场景：自动化操作 IDA Pro 进行批量分析
+Scenario: automating IDA Pro for batch analysis
 
-1. 用 OpenReverse CUA 模式打开 IDA Pro
-2. 自动加载目标二进制
-3. 等待分析完成
-4. 通过 UI 操作导出函数列表
-5. 同时用 network lane 观察 IDA 的网络行为（如 Lumina 请求）
+1. Open IDA Pro via OpenReverse CUA mode
+2. Automatically load the target binary
+3. Wait for analysis to finish
+4. Export the function list via UI operations
+5. Meanwhile use the network lane to observe IDA's network behavior (e.g., Lumina requests)
 ```
 
 ```text
-场景：自动化操作 x64dbg 调试
+Scenario: automating x64dbg debugging
 
-1. 用 OpenReverse UIA 模式启动 x64dbg
-2. 加载目标程序
-3. 设置断点
-4. 运行并观察寄存器/内存变化
-5. 截图保存证据
+1. Launch x64dbg via OpenReverse UIA mode
+2. Load the target program
+3. Set breakpoints
+4. Run and observe register/memory changes
+5. Save screenshots as evidence
 ```
 
 ---
 
-## 按需自举（On-Demand Bootstrap）
+## On-Demand Bootstrap
 
-### 自动化能力边界
+### Automation Capability Boundaries
 
-| 工具 | 可自动安装 | 安装方式 | 说明 |
+| Tool | Auto-installable | Install Method | Notes |
 |------|-----------|---------|------|
-| Playwright | ✓ | npm + npx playwright install | 浏览器自动化引擎 |
-| agent-browser CLI | ✓ | npm install -g agent-browser | 浏览器操作 CLI |
-| Node.js | ✓ | winget | 前置依赖 |
-| OpenReverse | ✗ | 手动 clone + npm install | 实验阶段，依赖较重 |
-| mitmproxy | ✗ | 手动安装 | OpenReverse 网络观察依赖 |
+| Playwright | ✓ | npm + npx playwright install | Browser automation engine |
+| agent-browser CLI | ✓ | npm install -g agent-browser | Browser operation CLI |
+| Node.js | ✓ | winget | Prerequisite dependency |
+| OpenReverse | ✗ | Manual clone + npm install | Experimental stage, heavy dependencies |
+| mitmproxy | ✗ | Manual install | OpenReverse network observation dependency |
 
-### 自举触发
+### Bootstrap Triggers
 
-- 浏览器操作缺 Playwright → 自动 bootstrap
-- 桌面操作需要 OpenReverse → 引导用户手动安装（给出完整步骤）
+- Browser operation missing Playwright → auto bootstrap
+- Desktop operation needs OpenReverse → guide the user through manual installation (provide full steps)
 
-### OpenReverse 手动安装引导
+### OpenReverse Manual Installation Guide
 
-如果 AI 检测到需要桌面应用自动化但 OpenReverse 未安装：
+If the AI detects that desktop application automation is needed but OpenReverse is not installed:
 
 ```markdown
-⚠️ **需要 OpenReverse 进行桌面应用自动化**
+⚠️ **OpenReverse is needed for desktop application automation**
 
-**安装步骤**：
+**Installation steps**:
 1. `git clone https://github.com/zhexulong/openreverse.git`
 2. `cd openreverse && npm install`
-3. `npm run init:agents -- --target=all <你的项目路径>`
-4. 如需视觉模式：`npm run install:cua-runtime`
-5. 如需网络观察：`npm run install:mitmproxy`
+3. `npm run init:agents -- --target=all <your project path>`
+4. If vision mode is needed: `npm run install:cua-runtime`
+5. If network observation is needed: `npm run install:mitmproxy`
 
-**验证**：`npm run doctor:cua-runtime` 和 `npm run doctor:network`
+**Verify**: `npm run doctor:cua-runtime` and `npm run doctor:network`
 ```
 
 ---
 
-## 路由上下文
+## Routing Context
 
-**上游入口**: `skills/SKILL.md`（总控）、`routing.md`
-**适用场景**: 任何需要自动化操作浏览器或桌面应用的任务
-**下游出口**:
-- 抓到的请求需要分析 → `anything-analyzer` 或 `js-reverse`
-- 需要 JS 调试/Hook → `jshookmcp`
-- 需要还原签名算法 → `js-reverse`
-- 桌面应用是逆向工具 → `ida-reverse/`
+**Upstream entry points**: `skills/SKILL.md` (master control), `routing.md`
+**Applicable scenarios**: any task that requires automating a browser or desktop application
+**Downstream exits**:
+- Captured requests need analysis → `anything-analyzer` or `js-reverse`
+- JS debugging/hooks needed → `jshookmcp`
+- Signature algorithm restoration needed → `js-reverse`
+- Desktop app is a reverse engineering tool → `ida-reverse/`
 
-**同级关联模块**: `js-reverse`（浏览器操作后可能需要分析 JS）、`ida-reverse`（OpenReverse 可以自动化操作 IDA GUI）
+**Related sibling modules**: `js-reverse` (after browser operations, JS analysis may be needed), `ida-reverse` (OpenReverse can automate the IDA GUI)
 
 
-## 任务完成自检（声称完成前 MUST 通过）
+## Task Completion Self-Check (MUST pass before claiming completion)
 
-- [ ] 我是否执行了工作流中的每一步（而不是只阅读）？
-- [ ] 我是否基于 `tool-index` 使用了真实工具路径？
-- [ ] 我是否产出了可复现证据（命令/脚本/截图/报告）？
-- [ ] 我是否完成并回写了 RULES 要求的 Checklist 项？
+- [ ] Did I execute every step of the workflow (rather than just reading it)?
+- [ ] Did I use real tool paths based on `tool-index`?
+- [ ] Did I produce reproducible evidence (commands/scripts/screenshots/reports)?
+- [ ] Did I complete and write back the Checklist items required by RULES?

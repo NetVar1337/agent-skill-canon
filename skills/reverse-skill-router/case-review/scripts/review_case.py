@@ -315,7 +315,7 @@ def parse_evidence(root, workitems, issues, verify_hashes):
             issue(issues, "error", "evidence.severity", "unsupported severity: " + severity, relative_path(root, path))
         if status not in EVIDENCE_STATUSES:
             issue(issues, "error", "evidence.status", "unsupported status: " + status, relative_path(root, path))
-        offline_note = any(marker in notes for marker in ("offline", "离线", "not applicable"))
+        offline_note = any(marker in notes for marker in ("offline", "not applicable"))
         if not repro_command or (repro_command.lower() in {"n/a", "n/a_re"} and not offline_note):
             issue(issues, "error", "evidence.repro_missing", "Evidence requires a reproducible command or documented offline limitation", relative_path(root, path))
         expected_hash = normalize_hash(content_hash_value) if content_hash_value.lower() != "n/a" else ""

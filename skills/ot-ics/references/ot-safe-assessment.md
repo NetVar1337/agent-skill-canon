@@ -1,10 +1,10 @@
-# OT 安全评估安全清单
+# OT Security Assessment Safety Checklist
 
-1. 授权范围与紧急联系人  
-2. 是否允许主动探测 / 写操作（默认否）  
-3. 维护窗口与回滚方案  
-4. 流量镜像优先于端口扫  
-5. 发现高危立即停止扩大并通报  
-6. 报告区分：可远程利用 vs 需物理接触  
+1. Authorized scope and emergency contacts  
+2. Whether active probing / write operations are allowed (default no)  
+3. Maintenance windows and rollback plans  
+4. Traffic mirroring preferred over port scanning  
+5. On a high-severity finding, stop expanding immediately and report  
+6. Report distinguishes: remotely exploitable vs requires physical access  
 
-常见协议端口（识别用，非利用手册）：Modbus/TCP 502、S7comm 102、EtherNet/IP 44818、DNP3 20000。
+Common protocol ports (for identification, not an exploitation manual): Modbus/TCP 502, S7comm 102, EtherNet/IP 44818, DNP3 20000.

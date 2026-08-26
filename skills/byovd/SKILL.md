@@ -38,6 +38,18 @@ Common families:
 | `phymemx64.sys` | Various | Physical memory R/W |
 | `capcom.sys` | Capcom | Arbitrary kernel R/W via HLT |
 
+Aftermath / xeroxz stack that *consumes* those primitives (archived, still the reference API):
+
+| Project | Role | Tree |
+| --- | --- | --- |
+| Physmeme (2020-04-19) | unsigned mapper via phys R/W | blog + predates VDM |
+| **VDM** | wrap any phys R/W driver; syscall into an inline hook on `NtShutdownSystem` to call any kernel export | `E:\Tools\git\aftermathlabs\VDM` |
+| **PTM** | walk/edit page tables from usermode once you have phys R/W | aftermath 2020-12-01 |
+| **MSREXEC** | elevate arbitrary `WRMSR` (LSTAR) to a ring-0 lambda; respects KVA shadow (`KiSystemCall64Shadow`) | `E:\Tools\git\aftermathlabs\msrexec` |
+| PSKP | process-context specific kernel patch | aftermath 2020-08-25 |
+
+VDM usage: pass `read_phys`/`write_phys` lambdas into `vdm::vdm_ctx`, then `vdm.syscall<Fn>(kva, ...)`. MSREXEC: pass a `writemsr_t` lambda; `msrexec.exec([](krnl_base, get_kroutine){ ... })` — no malloc/printf/syscalls inside the lambda. Voyager/Bluepill can supply the WRMSR instead of a driver. HVCI/AV hypervisors break MSREXEC.
+
 ### 2. IOCTL analysis
 
 Reverse engineer the driver's dispatch routine:

@@ -1,6 +1,6 @@
 ---
 name: windows-internals
-description: Use when analyzing Windows-native process, memory, object-manager, loader, security-token, ETW, IPC, kernel, or mitigation behavior. Builds a version-aware subsystem map and validates claims against the exact Windows build before offset recovery, debugging, driver work, or security research.
+description: Use when tracing Windows process creation, tokens, handles, RPC, COM, ALPC, ETW, WPP, TraceLogging, memory, Object Manager, loader, kernel I/O, mitigations, symbols, or build-specific offsets. Builds a version-aware subsystem map and validates claims against the exact Windows build before debugging, driver work, or security research.
 license: MIT
 ---
 # Windows internals research
@@ -100,6 +100,108 @@ Completion: each experiment names the invariant it tests and the observation tha
 
 Completion: the result is reproducible and the negative control is explained.
 
+## 7. Subsystem evidence recipes
+
+Each lab gets its own directory and starts with `platform.md` plus hashes for every user-mode binary, driver, and PDB used. Checkpoints are evidence boundaries, not elapsed-time milestones.
+
+### Recipe A: process creation, token, and handle transaction
+
+**Identity.** Record the OS build, parent/child hashes, `kernel32.dll`, `ntdll.dll`, and `ntoskrnl.exe`; in KD retain `vertarget` and `lmvm nt` output.
+
+```powershell
+$lab = 'C:\lab\proc-create'; New-Item -ItemType Directory -Force $lab | Out-Null
+Get-ComputerInfo | Select WindowsVersion,OsBuildNumber,OsArchitecture | Out-File "$lab\platform.txt"
+Get-FileHash C:\lab\bin\parent.exe,C:\lab\bin\child.exe,$env:SystemRoot\System32\ntdll.dll |
+  Format-Table -Auto | Out-File "$lab\modules.txt"
+procmon64.exe /AcceptEula /Quiet /Minimized /BackingFile "$lab\create.pml"
+C:\lab\bin\parent.exe
+procmon64.exe /Terminate
+procmon64.exe /OpenLog "$lab\create.pml" /SaveAs "$lab\create.csv" /SaveApplyFilter
+```
+
+Save a Procmon filter for the parent/child PIDs and include Process Create, Process Start, Process Exit, file, and registry operations. At the process-create breakpoint, resolve the child in KD:
+
+```text
+vertarget
+lmvm nt
+!process 0 0 child.exe
+!process <child_EPROCESS> 7
+!token <child_TOKEN>
+!handle 0 f <child_EPROCESS>
+```
+
+Checkpoints:
+
+1. The PML establishes parent PID, command line, image path, and operation ordering.
+2. `!process` and `!token` establish primary token, integrity, session, and protection state.
+3. `!handle` proves which inherited or duplicated handle names, granted-access masks, and kernel objects the child can actually use.
+4. A debugger or handle-close event proves final object lifetime and cleanup.
+
+Use a `CreateProcessW` harness with `STARTUPINFOEXW` and `PROC_THREAD_ATTRIBUTE_HANDLE_LIST`. The negative control sets `bInheritHandles=FALSE`; the positive case explicitly lists one inheritable event handle. Do not infer inheritance from equal handle values. Close process/thread/event handles, stop Procmon if the harness fails, and archive the PML before reverting the snapshot.
+
+### Recipe B: RPC to ALPC and server impersonation
+
+**Identity.** Hash the client, server, `rpcrt4.dll`, proxy/stub DLL, and service image. Export from RpcView the interface UUID/version, PID, endpoint, protocol sequence, transfer syntax, and procedure number. For COM, also retain the CLSID/AppID registration and activation identity.
+
+```powershell
+$lab = 'C:\lab\rpc-alpc'; New-Item -ItemType Directory -Force $lab | Out-Null
+Get-FileHash C:\lab\bin\client.exe,C:\lab\bin\server.exe,$env:SystemRoot\System32\rpcrt4.dll |
+  Export-Csv "$lab\modules.csv" -NoTypeInformation
+reg.exe query HKCR\CLSID\{CLSID} /s > "$lab\com-registration.txt"
+python rpcdump.py @localhost > "$lab\endpoint-mapper.txt"
+```
+
+For `ncalrpc`, confirm the named port below `\RPC Control` in WinObj, then correlate it in KD or a server debugger:
+
+```text
+!object \RPC Control
+!process 0 0 server.exe
+.process /r /p <server_EPROCESS>
+lmvm rpcrt4
+bp rpcrt4!NdrServerCallAll
+ g
+!thread
+!token <thread_ImpersonationToken>
+!alpc /lpp <server_pid>
+```
+
+Checkpoints are client bind, ALPC connection/port identity, entry to the recovered opnum, `RpcImpersonateClient` or equivalent transition, effective thread token at the privileged sink, `RpcRevertToSelf`, and context-handle/rundown completion. Preserve requested authentication service/level and impersonation QoS; a service process token does not prove the dispatch thread's effective identity.
+
+The negative control repeats the same opnum from a lower-integrity or unauthenticated client and must fail at the expected authorization check without reaching the sink. Close binding and context handles, cancel outstanding calls, revert impersonation, detach the debugger, and verify the server retains no client context. Route interface/NDR or COM activation depth to `windows-rpc-com-attack`.
+
+### Recipe C: ETW provider, session, and loss accounting
+
+**Identity.** Record the provider GUID/name, owning module hash/version, manifest or TraceLogging schema source, keyword/level mask, controller version, clock, and OS build.
+
+```powershell
+$lab = 'C:\lab\etw'; $guid = '{PROVIDER-GUID}'
+New-Item -ItemType Directory -Force $lab | Out-Null
+logman query providers > "$lab\providers.txt"
+wevtutil.exe gp 'Provider-Name' /ge:true > "$lab\provider-manifest.txt"
+wpr.exe -providers > "$lab\wpr-providers.txt"
+logman create trace WI-Lab -p $guid 0xffffffffffffffff 0xff -bs 1024 -nb 16 128 `
+  -o "$lab\provider.etl" -ets
+C:\lab\bin\emit-known-event.exe
+logman stop WI-Lab -ets
+tracerpt "$lab\provider.etl" -of XML -o "$lab\events.xml" -summary "$lab\summary.txt"
+```
+
+For a separate kernel/user correlation run, preserve the profile name with the ETL:
+
+```powershell
+wpr.exe -start GeneralProfile -filemode
+C:\lab\bin\emit-known-event.exe
+wpr.exe -stop "$lab\general-profile.etl" 'WI correlation run'
+```
+
+Checkpoints are provider registration, enable callback state, one schema-validated sentinel event, the target transaction and activity ID, session stop/rundown, and ETL header/summary loss counters. Open the ETL in WPA to verify clock domain, per-CPU ordering, stacks when requested, and payload decoding.
+
+For the loss control, replay the same bounded event corpus once with deliberately small buffers (`-bs 64 -nb 2 2`) and once with the normal allocation above. Compare emitted sequence numbers, consumed events, `EventsLost`, and buffer loss; never interpret absence until the healthy run captures the sentinel. The negative control disables the target keyword while retaining an independent enabled sentinel keyword, proving that filtering—not a dead provider or consumer—caused the expected absence.
+
+Always run `logman stop WI-Lab -ets` and `logman delete WI-Lab` during cleanup; use `wpr -cancel` if a parallel WPR profile remains active. Preserve ETL, manifest/metadata, controller command line, summary, and consumer export. Route private-schema, WPP, TraceLogging, stack-walk, or buffer-engineering depth to `windows-telemetry-etw`.
+
+Completion: all three recipes identify the tested build, record their checkpoints and negative control, and leave no live trace session, debugger attachment, impersonation token, binding, or inherited handle.
+
 ## Offense quick-map (build-pinned, verify before use)
 
 Methodology above governs proof; this map speeds recall. Every entry is
@@ -143,8 +245,10 @@ hypotheses.md     invariant, experiment, control, result, status
 artifacts/        ETL, PML, dumps, debugger logs, scripts, minimized inputs
 ```
 
-## Pairings
+## Routing
 
+- Batch A siblings: `bof-coff-development`, `windows-rpc-com-attack`, `windows-telemetry-etw`, and `hyper-v-offensive`.
+- Batch B siblings: `linux-kernel-exploitation`, `c2-implant-engineering`, `ebpf-offensive`, and `linux-host-post-exploitation`.
 - Native binary, driver, or crash: `ida-reverse`, `ghidra-reverse`, `windows-driver-0day`, `pwndbg-dynamic-analysis` as appropriate.
 - Privileged Windows workflow: `windows-0day-hunting`, `windows-privileged-file-workflows`, `windows-object-manager-confusion`, `windows-profile-hive-research`, or `windows-recovery-state-research`.
 - Kernel development or virtualization: `kernel-dev`, `hypervisor-dev`, `kevlar-driver-emulation`, `stealth-hypervisor`.

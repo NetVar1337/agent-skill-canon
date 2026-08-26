@@ -1,38 +1,38 @@
-# Root / 越狱 / 反调试 / SSL Pinning 绕过
+# Root / Jailbreak / Anti-Debug / SSL Pinning Bypass
 
-## 检测层次模型
+## Detection Layer Model
 
 ```
-Layer 1: 静态检测（安装时/启动时）
-  ├─ 包管理器检测（Cydia, apt, Magisk）
-  ├─ 文件检测（su, busybox, frida-server）
-  └─ 权限检测（ro.debuggable, ro.secure）
+Layer 1: Static detection (at install/launch time)
+  ├─ Package manager detection (Cydia, apt, Magisk)
+  ├─ File detection (su, busybox, frida-server)
+  └─ Permission detection (ro.debuggable, ro.secure)
 
-Layer 2: 运行时检测（持续）
-  ├─ 进程检测（frida-server, magiskd）
-  ├─ 端口检测（27042 frida default）
-  ├─ 内存检测（/proc/self/maps 注入痕迹）
-  └─ 堆栈检测（Frida 调用帧）
+Layer 2: Runtime detection (continuous)
+  ├─ Process detection (frida-server, magiskd)
+  ├─ Port detection (27042 frida default)
+  ├─ Memory detection (/proc/self/maps injection traces)
+  └─ Stack detection (Frida call frames)
 
-Layer 3: 环境检测（按需触发）
-  ├─ ptrace 检测（TracerPid）
-  ├─ /proc/self/status 检测
-  ├─ build.prop 检测（test-keys）
-  └─ syscall 直接检测（绕过 libc）
+Layer 3: Environment detection (triggered on demand)
+  ├─ ptrace detection (TracerPid)
+  ├─ /proc/self/status detection
+  ├─ build.prop detection (test-keys)
+  └─ Direct syscall detection (bypassing libc)
 ```
 
-## Android Root 检测绕过
+## Android Root Detection Bypass
 
-### 常见检测库及绕过
+### Common detection libraries and bypasses
 
-| 检测库 | 检测方法 | 绕过方式 |
+| Detection library | Detection method | Bypass |
 |--------|---------|---------|
-| RootBeer | 8 种检测组合 | Hook 每个检测方法返回 false |
-| SafetyNet | Google Play Services 远程认证 | 使用 Magisk Hide / Shamiko / Play Integrity Fix |
-| Google Play Integrity | 替换 SafetyNet | Trickystore + PIF |
-| 自定义 native 检测 | syscall 读取 /proc/self/status | Hook syscall 或修改 /proc 挂载 |
+| RootBeer | Combination of 8 checks | Hook each detection method to return false |
+| SafetyNet | Google Play Services remote attestation | Use Magisk Hide / Shamiko / Play Integrity Fix |
+| Google Play Integrity | Replaces SafetyNet | Trickystore + PIF |
+| Custom native detection | syscall reading /proc/self/status | Hook syscall or modify the /proc mount |
 
-### Frida 综合绕过
+### Comprehensive Frida Bypass
 
 ```javascript
 Java.perform(function() {
@@ -45,12 +45,12 @@ Java.perform(function() {
         RootBeer[m].implementation = function() { return false; };
     });
 
-    // 通用 Build.TAGS 检测
+    // Generic Build.TAGS detection
     var Build = Java.use("android.os.Build");
     var original = Build.TAGS.value;
     Build.TAGS.value = "release-keys";
 
-    // PackageManager → 隐藏包名
+    // PackageManager → hide package names
     var PackageManager = Java.use("android.content.pm.PackageManager");
     PackageManager.getPackageInfo.overload('java.lang.String', 'int').implementation = function(pkg, flags) {
         if (pkg == "de.robv.android.xposed.installer" || 
@@ -62,47 +62,47 @@ Java.perform(function() {
 });
 ```
 
-## iOS 越狱检测绕过
+## iOS Jailbreak Detection Bypass
 
-### 多层 Frida Hook
+### Multi-layer Frida Hooks
 
 ```javascript
-// 1. 文件系统检测
+// 1. Filesystem detection
 var NSFileManager = ObjC.classes.NSFileManager;
 var paths = [
     "/Applications/Cydia.app", "/var/lib/apt", "/bin/bash",
     "/usr/sbin/sshd", "/etc/apt", "/Library/MobileSubstrate"
 ];
-// Hook fileExistsAtPath 返回 NO
+// Hook fileExistsAtPath to return NO
 
-// 2. fork 检测（沙箱内禁止）
+// 2. fork detection (forbidden inside the sandbox)
 var fork_ptr = Module.findExportByName("libSystem.B.dylib", "fork");
 Interceptor.replace(fork_ptr, new NativeCallback(function() {
     return -1;
 }, 'int', []));
 
-// 3. Scheme 检测
-// 通过 MobileSubstrate hook
+// 3. Scheme detection
+// via MobileSubstrate hook
 var LSApplicationWorkspace = ObjC.classes.LSApplicationWorkspace;
-// Hook defaultWorkspace → canOpenURL → 对 cydia:// 返回 NO
+// Hook defaultWorkspace → canOpenURL → return NO for cydia://
 
-// 4. 签名检测
+// 4. Signature detection
 var MISValidateSignature = Module.findExportByName(null, "MISValidateSignature");
 Interceptor.attach(MISValidateSignature, {
     onLeave: function(retval) { retval.replace(0); }
 });
 ```
 
-## 反调试绕过
+## Anti-Debug Bypass
 
 ### Android
 
 ```javascript
-// 1. ptrace 自身 → 防止附加
+// 1. ptrace on itself → prevents attaching
 // Native: ptrace(PTRACE_TRACEME, 0, NULL, 0)
-// 绕过: Hook ptrace → 返回 0
+// Bypass: Hook ptrace → return 0
 
-// 2. TracerPid 检测
+// 2. TracerPid detection
 // /proc/self/status → TracerPid: 0
 var fopen = Module.findExportByName(null, "fopen");
 Interceptor.attach(fopen, {
@@ -111,7 +111,7 @@ Interceptor.attach(fopen, {
     },
     onLeave: function(retval) {
         if (this.path && this.path.includes("status")) {
-            // 修改返回的 FILE*，返回伪造内容
+            // Modify the returned FILE* to return forged content
         }
     }
 });
@@ -125,58 +125,58 @@ Debug.isDebuggerConnected.implementation = function() { return false; };
 
 ```javascript
 // 1. PT_DENY_ATTACH
-// ptrace(PT_DENY_ATTACH, 0, NULL, 0) → 防止调试器附加
+// ptrace(PT_DENY_ATTACH, 0, NULL, 0) → prevents debugger attach
 var ptrace = Module.findExportByName(null, "ptrace");
 Interceptor.replace(ptrace, new NativeCallback(function(request, pid, addr, data) {
-    if (request == 31) return 0; // PT_DENY_ATTACH → 忽略
+    if (request == 31) return 0; // PT_DENY_ATTACH → ignore
     return ptrace(request, pid, addr, data);
 }, 'int', ['int', 'int', 'pointer', 'int']));
 
-// 2. sysctl 检测
+// 2. sysctl detection
 var sysctl = Module.findExportByName(null, "sysctl");
 Interceptor.attach(sysctl, {
     onLeave: function(retval) {
-        // 修改 kinfo_proc 的 p_flag 字段 → 清除 P_TRACED
+        // Modify the p_flag field of kinfo_proc → clear P_TRACED
     }
 });
 
-// 3. getppid 检测（检查父进程是否为 launchd）
-// 调试时 getppid() != 1
+// 3. getppid detection (check whether the parent process is launchd)
+// When debugging, getppid() != 1
 ```
 
-## SSL Pinning 绕过
+## SSL Pinning Bypass
 
-### Android 五层绕过
+### Android five-layer bypass
 
 ```text
-层 1 — TrustManager: 接受所有证书
-层 2 — OkHttp CertificatePinner: Hook 清空 pins 列表
-层 3 — WebView SSL Error Handler: 忽略证书错误
-层 4 — Network Security Config: 修改 xml → 信任用户证书
-层 5 — Native SSL (OpenSSL/BoringSSL): Hook SSL_get_verify_result → X509_V_OK
+Layer 1 — TrustManager: accept all certificates
+Layer 2 — OkHttp CertificatePinner: Hook and empty the pins list
+Layer 3 — WebView SSL Error Handler: ignore certificate errors
+Layer 4 — Network Security Config: modify the xml → trust user certificates
+Layer 5 — Native SSL (OpenSSL/BoringSSL): Hook SSL_get_verify_result → X509_V_OK
 ```
 
-### iOS 四层绕过
+### iOS four-layer bypass
 
 ```text
-层 1 — NSURLSession: Hook SecTrustEvaluate → kSecTrustResultProceed
-层 2 — Alamofire: Hook ServerTrustManager
-层 3 — AFNetworking: Hook AFSecurityPolicy
-层 4 — libcurl: LD_PRELOAD 替换 SSL 验证回调
+Layer 1 — NSURLSession: Hook SecTrustEvaluate → kSecTrustResultProceed
+Layer 2 — Alamofire: Hook ServerTrustManager
+Layer 3 — AFNetworking: Hook AFSecurityPolicy
+Layer 4 — libcurl: LD_PRELOAD to replace the SSL verification callback
 ```
 
-### 通用 Objection 命令
+### Generic Objection commands
 
 ```bash
 # Android
 objection -g "com.app" explore
 android sslpinning disable
-# 等价于: 自动 Hook 上述 5 层
+# Equivalent to: automatically hooking the 5 layers above
 
 # iOS
 objection -g "com.app" explore
 ios sslpinning disable
-# 等价于: 自动 Hook 上述 4 层
+# Equivalent to: automatically hooking the 4 layers above
 ```
 
 Source: OWASP MSTG, Frida CodeShare, objection wiki

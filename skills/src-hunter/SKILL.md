@@ -1,6 +1,6 @@
 ---
 name: src-hunter
-description: "实战 SRC / 众测 / Bug bounty 漏洞挖掘工作流 skill。包含：5 阶段方法论（intake → recon → enum → hunt → report）、19 个攻击类 playbook（SQLi/XSS/RCE/SSRF/IDOR/CSRF/Path Traversal/File Upload/SSTI/XXE/Race/HTTP Smuggling/OAuth/JWT/SAML/GraphQL/Mobile/LLM/DoS）、305 个结构化 payload、263 个 WAF/EDR 绕过变体、2887 份 HackerOne 真实 High/Critical 已披露案例、77,000+ WooYun 案例统计、国产 OA / 中间件指纹库、银行 / 电信行业垂直 playbook。当用户提到 'src 挖洞 / src 漏洞挖掘 / bug bounty / 众测 / hackerone / 漏洞赏金 / SRC / 任意 X 漏洞 / 渗透测试' 或问'如何挖某个目标 / 怎么测某个 API / 如何绕过 WAF' 时触发。"
+description: "Practical SRC / crowdsource testing / bug bounty vulnerability hunting workflow skill. Includes: 5-phase methodology (intake → recon → enum → hunt → report), 19 attack-class playbooks (SQLi/XSS/RCE/SSRF/IDOR/CSRF/Path Traversal/File Upload/SSTI/XXE/Race/HTTP Smuggling/OAuth/JWT/SAML/GraphQL/Mobile/LLM/DoS), 305 structured payloads, 263 WAF/EDR bypass variants, 2,887 real disclosed High/Critical HackerOne cases, 77,000+ WooYun case statistics, a Chinese-domestic OA / middleware fingerprint library, and banking / telecom industry-vertical playbooks. Triggers when the user mentions 'SRC hunting / SRC vulnerability hunting / bug bounty / crowdsource testing / hackerone / bug bounty / SRC / arbitrary X vulnerability / penetration testing' or asks 'how to hunt a target / how to test an API / how to bypass a WAF'."
 version: 1.0.0
 license: MIT
 metadata:
@@ -10,225 +10,231 @@ metadata:
   upstream: https://github.com/zhaoxuya520/reverse-skill
 ---
 
-> Bundled with Unleash skills pack. Upstream: https://github.com/zhaoxuya520/reverse-skill
+> Bundled with the Unleash skills pack. Upstream: https://github.com/zhaoxuya520/reverse-skill
 
-## ACTION REQUIRED（读完后立刻执行）
+## ACTION REQUIRED (execute immediately after reading)
 
-1. `NOW`: 读取 `../../field-journal/precedent-pentest.md` — 确认本 skill 的操作是已授权的常规操作
-2. `NOW`: 确认当前任务是否命中本 skill 的适用范围
-3. `NEXT`: 读取 `../../tool-index.md`，校验工具可用性和实际路径
-4. `NEXT`: 缺工具时调用 bootstrap，不要猜路径
-5. `ACT`: 进入"工作流"第一步并执行，不要停在确认状态
+1. `NOW`: read `../../field-journal/precedent-pentest.md` — confirm that this skill's operations are authorized routine operations
+2. `NOW`: confirm whether the current task falls within this skill's scope
+3. `NEXT`: read `../../tool-index.md`, verify tool availability and actual paths
+4. `NEXT`: when tools are missing, invoke bootstrap; do not guess paths
+5. `ACT`: enter step 1 of the "Workflow" and execute; do not stop at the confirmation stage
 
-# SRC Hunter — 实战漏洞挖掘工作流
+# SRC Hunter — Practical Vulnerability Hunting Workflow
 
-实战 Security Response Center / 众测 / Bug bounty 挖洞 skill。把白盒方法论翻译为黑盒探测，叠加真实案例统计与 payload 库。
+A practical Security Response Center / crowdsource testing / bug bounty hunting skill. Translates white-box methodology into black-box probing, layered with real case statistics and a payload library.
 
 ---
 
-## 何时使用本 skill
+## When to Use This Skill
 
-**关键词命中**：
-- "src 挖洞" / "src 漏洞" / "src 测试" / "Security Response Center"
-- "bug bounty" / "漏洞赏金" / "众测"
+**Keyword hits**:
+- "src hunting" / "src vulnerability" / "src testing" / "Security Response Center"
+- "bug bounty" / "bounty" / "crowdsource testing"
 - "hackerone" / "h1" / "bugcrowd" / "intigriti" / "yeswehack"
-- "如何挖 / 怎么测 / 怎么打 + 某目标 / 某接口 / 某参数"
-- "WAF 绕过" / "绕过 WAF" / "WAF bypass"
-- "任意账号 / 任意修改 / 任意删除 / 任意操作" 类越权
-- "密码重置" / "找回密码" 类逻辑
-- "未授权访问" / "默认凭据" / "Actuator" / "Spring 暴露" / "Redis 未授权"
-- 用户给一个 URL 或 API endpoint 让你测
+- "how to hunt / how to test / how to hit + some target / some endpoint / some parameter"
+- "WAF bypass" / "bypass WAF"
+- "arbitrary account / arbitrary modify / arbitrary delete / arbitrary operation"-class broken access control
+- "password reset" / "account recovery"-class logic
+- "unauthorized access" / "default credentials" / "Actuator" / "Spring exposure" / "unauthenticated Redis"
+- User gives you a URL or API endpoint to test
 
-**不应使用本 skill**：
-- 纯白盒源码审计（用 `code-audit` skill）
-- 已知漏洞的修复 / 防御问答（用通用对话）
-- 单独的 CTF 题目（这是真实环境工作流）
-
----
-
-## 工作流 — 5 阶段
-
-### Phase 1 · Intake（接单）
-
-输入：程序名 / SRC 入口 URL / 子域。
-
-要做的事：
-- 抓 Scope（in-scope domains / IPs / mobile apps / API endpoints）
-- 抓 Out-of-scope（禁测内容、第三方服务、cloud assets exclusions）
-- 抓规则（payout tiers、disclosure window、retest policy、safe-harbor）
-- 抓测试账号 / 测试 header（如 `X-Bug-Bounty: <handle>`）
-
-**优先级判断**（基于命中类型预估命中率，参考 `references/methodology/05-srctimebox-priority.md`）：
-- 6 小时窗口 → 跑高命中率类型（密码重置 88% / 任意账号 86.4% / 提现 83.1%）
-- 单日窗口 → 加上信息泄露 + 资产暴露 + Actuator
-- HVV / 重点期 → 全谱
-
-→ 详见 [`references/methodology/00-index.md`](references/methodology/00-index.md)
-
-### Phase 2 · Recon（被动侦察）
-
-不发包给目标的情报收集：
-
-- **CT 日志**：crt.sh / Censys（找子域）
-- **历史快照**：Wayback / CommonCrawl
-- **GitHub 搜索**：`org:target` + 关键词（password / api_key / SECRET）
-- **搜索引擎 dorks**：`site:target.com inurl:/admin`、`filetype:env`、`intitle:Index of`
-- **ASN / IP 段**：bgp.he.net 找 IP 块
-- **Favicon hash**：FOFA / Shodan 找同 favicon 资产
-- **DNS 历史**：SecurityTrails / Whoisxmlapi
-
-### Phase 3 · Enum（主动探测）
-
-**资产枚举**：
-- 子域：amass / subfinder / puredns / dnsx
-- 存活：httpx / naabu
-- 截图：gowitness / aquatone
-- 内容发现：ffuf / feroxbuster / dirsearch
-- 技术指纹：wappalyzer / webanalyze（同时查 `references/dictionaries/chinese-srcfingerprints.md` 命中国产组件）
-- JS 提取：linkfinder / subjs / gau / katana
-- 子域接管指纹：subjack / subzy
-
-### Phase 4 · Hunt（漏洞探测）
-
-按攻击类型走对应 playbook，**每个 playbook 都包含**：方法论 + 参数频率表 + 真实 H1 案例 + 结构化 payload + WAF 绕过变体。
-
-**优先级路径**（按命中率 + 价值排序）：
-
-| Playbook | 入口提示 | 文件 |
-|---|---|---|
-| **未授权访问** | Actuator/Swagger/默认端口/弱密码 | `references/playbooks/unauth-access.md` |
-| **信息泄露** | .git/.svn/.env/heapdump/路径列举 | `references/playbooks/info-disclosure.md` |
-| **任意 X 越权** | 用户态 ID 可遍历/可修改 | `references/playbooks/arbitrary-x-authz.md` |
-| **业务逻辑** | 密码重置/支付/订单/验证码 | `references/playbooks/logic-flaws.md` |
-| **OAuth/SAML/JWT** | 认证流/redirect_uri/token | `references/playbooks/oauth-saml-jwt.md` |
-| **API REST** | BOLA/Mass Assignment/速率 | `references/playbooks/api-rest.md` |
-| **SQLi** | 任何用户输入进 DB | `references/playbooks/sqli.md` |
-| **RCE** | 反序列化/SSTI/XXE/原型链/框架 | `references/playbooks/rce.md` |
-| **SSRF** | URL 入参/缓存/Host 注入 | `references/playbooks/ssrf-cache-host.md` |
-| **路径遍历** | 文件路径入参/LFI/RFI | `references/playbooks/path-traversal.md` |
-| **文件上传** | 上传点 + 解析漏洞 | `references/playbooks/file-upload.md` |
-| **XSS** | 任何用户输入进 HTML/JS | `references/playbooks/xss.md` |
-| **HTTP 走私** | 反代 + Content-Length | `references/playbooks/http-smuggling.md` |
-| **GraphQL** | introspection/嵌套 | `references/playbooks/graphql.md` |
-| **竞态** | 并发请求 / TOCTOU | `references/playbooks/race-conditions.md` |
-| **DoS** | ReDoS / 资源不限速 / 算法爆炸 | `references/playbooks/dos.md` |
-| **移动端** | Android / iOS APK | `references/playbooks/mobile.md` |
-| **LLM Agent** | Prompt 注入 / 工具调用 | `references/playbooks/llm-prompt-injection.md` |
-| **内网后渗透** | 凭据 / 横向 / 域 | `references/playbooks/intranet-postexp.md` |
-
-**通用方法论**（不分攻击类型）：
-
-| 文档 | 关键内容 |
-|---|---|
-| [`methodology/01-attack-priority.md`](references/methodology/01-attack-priority.md) | RCE>文件写>认证绕过>注入>信息泄露 价值排序 |
-| [`methodology/02-bypass-toolkit.md`](references/methodology/02-bypass-toolkit.md) | 通用绕过决策树 + 编码 / 混淆 / WAF |
-| [`methodology/03-evidence-discipline.md`](references/methodology/03-evidence-discipline.md) | 黑盒证据规则 + 反幻觉 + 合规 |
-| [`methodology/04-control-gap-hunting.md`](references/methodology/04-control-gap-hunting.md) | 9 类敏感操作 → 应有控制 → 探测缺失 |
-| [`methodology/05-srctimebox-priority.md`](references/methodology/05-srctimebox-priority.md) | 6h / 单日 / HVV / 月度 时间盒模板 |
-
-**行业垂直 playbook**（资产相关时优先看）：
-
-| 行业 | 文档 | 何时用 |
-|---|---|---|
-| 银行 / 支付 / 金融 | [`industry/banking-finance.md`](references/industry/banking-finance.md) | 目标含支付 / 网银 / 第三方支付聚合 |
-| 电信 / ISP | [`industry/telecom-isp.md`](references/industry/telecom-isp.md) | 目标是运营商 / BOSS / 网管 / 物联网卡 |
-
-**字典 / 凭据**：
-
-| 文档 | 用途 |
-|---|---|
-| [`dictionaries/default-credentials-cn.md`](references/dictionaries/default-credentials-cn.md) | 致远 / 通达 / 万户 / 泛微 / 用友 / 金蝶 / 华为 / 中兴 / 海康等国产凭据 |
-| [`dictionaries/chinese-srcfingerprints.md`](references/dictionaries/chinese-srcfingerprints.md) | 国产 OA / 中间件指纹 + 高频参数 + 一键检测命令 |
-
-### Phase 5 · Report（提交）
-
-→ 用模板 [`templates/report-submission.md`](references/templates/report-submission.md)
-
-**三段式骨架**：
-1. **标题**：精确到 endpoint + 漏洞类型，不超过 80 字
-2. **重现步骤**：每步可执行 / 截图 / HAR
-3. **影响 + 修复建议**：CVSS 4.0 vector + 业务影响段
+**Do not use this skill**:
+- Pure white-box source code audits (use the `code-audit` skill)
+- Fix / defense Q&A for known vulnerabilities (use general conversation)
+- Standalone CTF challenges (this is a real-environment workflow)
 
 ---
 
-## MCP 工具集成
+## Workflow — 5 Phases
 
-本 skill 支持调用本地 MCP 服务器作为工具层。**主选 jshookmcp**(134 工具精选 / 386 全集 / 36 域,内置 Burp Suite bridge / Frida / WASM / 反调试 / Android adb / sourcemap 重构)。完整索引与场景映射:
+### Phase 1 · Intake (taking the engagement)
+
+Inputs: program name / SRC entry URL / subdomain.
+
+Things to do:
+- Grab the scope (in-scope domains / IPs / mobile apps / API endpoints)
+- Grab the out-of-scope items (forbidden content, third-party services, cloud asset exclusions)
+- Grab the rules (payout tiers, disclosure window, retest policy, safe-harbor)
+- Grab test accounts / test headers (e.g., `X-Bug-Bounty: <handle>`)
+
+**Priority judgment** (estimate hit rates by finding type, see `references/methodology/05-srctimebox-priority.md`):
+- 6-hour window → run high-hit-rate types (password reset 88% / arbitrary account 86.4% / withdrawal 83.1%)
+- Single-day window → add information disclosure + asset exposure + Actuator
+- HVV / critical period → full spectrum
+
+→ Details in [`references/methodology/00-index.md`](references/methodology/00-index.md)
+
+### Phase 2 · Recon (passive reconnaissance)
+
+Intelligence gathering without sending packets to the target:
+
+- **CT logs**: crt.sh / Censys (find subdomains)
+- **Historical snapshots**: Wayback / CommonCrawl
+- **GitHub search**: `org:target` + keywords (password / api_key / SECRET)
+- **Search engine dorks**: `site:target.com inurl:/admin`, `filetype:env`, `intitle:Index of`
+- **ASN / IP ranges**: bgp.he.net to find IP blocks
+- **Favicon hash**: FOFA / Shodan to find assets with the same favicon
+- **DNS history**: SecurityTrails / Whoisxmlapi
+
+### Phase 3 · Enum (active probing)
+
+**Asset enumeration**:
+- Subdomains: amass / subfinder / puredns / dnsx
+- Liveness: httpx / naabu
+- Screenshots: gowitness / aquatone
+- Content discovery: ffuf / feroxbuster / dirsearch
+- Technology fingerprinting: wappalyzer / webanalyze (also check `references/dictionaries/chinese-srcfingerprints.md` to identify domestic Chinese components)
+- JS extraction: linkfinder / subjs / gau / katana
+- Subdomain takeover fingerprints: subjack / subzy
+
+### Phase 4 · Hunt (vulnerability probing)
+
+Follow the playbook for each attack type; **every playbook includes**: methodology + parameter frequency tables + real H1 cases + structured payloads + WAF bypass variants.
+
+**Priority paths** (ordered by hit rate + value):
+
+| Playbook | Entry Hints | File |
+|---|---|---|
+| **Unauthorized access** | Actuator/Swagger/default ports/weak passwords | `references/playbooks/unauth-access.md` |
+| **Information disclosure** | .git/.svn/.env/heapdump/directory listing | `references/playbooks/info-disclosure.md` |
+| **Arbitrary X broken access control** | User-state IDs enumerable/modifiable | `references/playbooks/arbitrary-x-authz.md` |
+| **Business logic** | Password reset/payment/orders/CAPTCHA | `references/playbooks/logic-flaws.md` |
+| **OAuth/SAML/JWT** | Auth flows/redirect_uri/tokens | `references/playbooks/oauth-saml-jwt.md` |
+| **REST API** | BOLA/Mass Assignment/rate limits | `references/playbooks/api-rest.md` |
+| **SQLi** | Any user input reaching the DB | `references/playbooks/sqli.md` |
+| **RCE** | Deserialization/SSTI/XXE/prototype pollution/frameworks | `references/playbooks/rce.md` |
+| **SSRF** | URL parameters/caching/Host injection | `references/playbooks/ssrf-cache-host.md` |
+| **Path traversal** | File path parameters/LFI/RFI | `references/playbooks/path-traversal.md` |
+| **File upload** | Upload points + parsing flaws | `references/playbooks/file-upload.md` |
+| **XSS** | Any user input reaching HTML/JS | `references/playbooks/xss.md` |
+| **HTTP smuggling** | Reverse proxy + Content-Length | `references/playbooks/http-smuggling.md` |
+| **GraphQL** | introspection/nesting | `references/playbooks/graphql.md` |
+| **Race conditions** | Concurrent requests / TOCTOU | `references/playbooks/race-conditions.md` |
+| **DoS** | ReDoS / unthrottled resources / algorithmic blowup | `references/playbooks/dos.md` |
+| **Mobile** | Android / iOS APKs | `references/playbooks/mobile.md` |
+| **LLM Agent** | Prompt injection / tool calls | `references/playbooks/llm-prompt-injection.md` |
+| **Intranet post-exploitation** | Credentials / lateral movement / domain | `references/playbooks/intranet-postexp.md` |
+
+**General methodology** (attack-type agnostic):
+
+| Document | Key Content |
+|---|---|
+| [`methodology/01-attack-priority.md`](references/methodology/01-attack-priority.md) | RCE>file write>auth bypass>injection>info disclosure value ordering |
+| [`methodology/02-bypass-toolkit.md`](references/methodology/02-bypass-toolkit.md) | Universal bypass decision tree + encoding / obfuscation / WAF |
+| [`methodology/03-evidence-discipline.md`](references/methodology/03-evidence-discipline.md) | Black-box evidence rules + anti-hallucination + compliance |
+| [`methodology/04-control-gap-hunting.md`](references/methodology/04-control-gap-hunting.md) | 9 classes of sensitive operations → expected controls → probe for gaps |
+| [`methodology/05-srctimebox-priority.md`](references/methodology/05-srctimebox-priority.md) | 6h / single-day / HVV / monthly timebox templates |
+
+**Industry-vertical playbooks** (read first when assets are relevant):
+
+| Industry | Document | When to Use |
+|---|---|---|
+| Banking / payments / finance | [`industry/banking-finance.md`](references/industry/banking-finance.md) | Target includes payments / online banking / third-party payment aggregation |
+| Telecom / ISP | [`industry/telecom-isp.md`](references/industry/telecom-isp.md) | Target is a carrier / BOSS / network management / IoT SIM cards |
+
+**Dictionaries / credentials**:
+
+| Document | Purpose |
+|---|---|
+| [`dictionaries/default-credentials-cn.md`](references/dictionaries/default-credentials-cn.md) | Domestic Chinese credentials for Seeyo / Tongda / Wanhu / Weaver / Yonyou / Kingdee / Huawei / ZTE / Hikvision, etc. |
+| [`dictionaries/chinese-srcfingerprints.md`](references/dictionaries/chinese-srcfingerprints.md) | Domestic Chinese OA / middleware fingerprints + high-frequency parameters + one-shot detection commands |
+
+### Phase 5 · Report (submission)
+
+→ Use the template [`templates/report-submission.md`](references/templates/report-submission.md)
+
+**Three-part skeleton**:
+1. **Title**: precise down to endpoint + vulnerability type, no more than 80 characters
+2. **Reproduction steps**: each step executable / screenshots / HAR
+3. **Impact + fix recommendations**: CVSS 4.0 vector + business impact section
+
+---
+
+## MCP Tool Integration
+
+This skill supports invoking local MCP servers as a tool layer. **Primary choice: jshookmcp** (134 curated tools / 386 full set / 36 domains, with built-in Burp Suite bridge / Frida / WASM / anti-debugging / Android adb / sourcemap reconstruction). Full index and scenario mapping:
 
 → [`references/tools/mcp-jshook.md`](references/tools/mcp-jshook.md)
 
-默认推荐 `search` profile(上下文成本 ~3K token),通过 `mcp__jshook__search_tools` + `mcp__jshook__activate_tools` 按需激活,避免 `full` profile 一次性加载 40K+ token。
+The default recommendation is the `search` profile (~3K token context cost), activating on demand via `mcp__jshook__search_tools` + `mcp__jshook__activate_tools`, avoiding the `full` profile loading 40K+ tokens at once.
 
 ---
 
-## 数据资产规模
+## Data Asset Scale
 
-| 类别 | 量级 |
+| Category | Scale |
 |---|---|
-| 攻击类 playbook | 19 个 |
-| 通用方法论文档 | 6 个 |
-| 行业垂直 playbook | 2 个（银行 / 电信） |
-| 字典 / 凭据 | 3 个 |
-| 报告模板 | 1 个 |
-| 结构化 payload | **305 条**（177 web + 128 内网） |
-| WAF / EDR 绕过变体 | **263 个步骤**，覆盖 23 类 Web 攻击 |
-| 工具命令速查 | 114 条（Nmap/SQLMap/Burp/MSF/...） |
-| HackerOne 真实案例（已披露 High/Critical） | **2887 份**，按 weakness 分到 141 个分类 MD |
-| WooYun 历史案例统计（不可再生） | 88,636 条 |
+| Attack-class playbooks | 19 |
+| General methodology documents | 6 |
+| Industry-vertical playbooks | 2 (banking / telecom) |
+| Dictionaries / credentials | 3 |
+| Report templates | 1 |
+| Structured payloads | **305** (177 web + 128 intranet) |
+| WAF / EDR bypass variants | **263 steps**, covering 23 classes of web attacks |
+| Tool command quick reference | 114 (Nmap/SQLMap/Burp/MSF/...) |
+| Real HackerOne cases (disclosed High/Critical) | **2,887**, grouped by weakness into 141 category MDs |
+| WooYun historical case statistics (non-renewable) | 88,636 entries |
 
-H1 真实案例已**直接嵌入对应 playbook 末尾**（每个 playbook 末尾有"H1 真实案例" Top 12 表 + 摘要）。
-
----
-
-## 合规与合法红线
-
-每个 playbook 末段都有"不要做的事"。通用红线（任何 SRC 都遵守）：
-
-- ❌ 出 scope 的资产 / 域名 → 立即停手并报备
-- ❌ 实际取走他人 PII → 仅证明可访问，立即销毁
-- ❌ 持续负载 / DoS / 大流量 → 仅 1–3 个 PoC 包，立即停止
-- ❌ 修改他人数据（即使有写权限）→ 仅在自己控制的对象上验证
-- ❌ 在生产做钓鱼或社工 → 不做
-- ❌ 提交未复现的猜测 → 必须有 HTTP 包 / 截图 / 视频证据
-- ✅ 测试 header 标记自己（如 `X-Bug-Bounty: <handle>`）
-- ✅ 用自己的两个账号自演越权场景
-- ✅ 用 OOB 域名做 SSRF 探测，不要用别人的 DNSLog
-- ✅ 提交前用 `references/templates/report-submission.md` 自查
+Real H1 cases are **embedded directly at the end of the corresponding playbooks** (each playbook ends with a "Real H1 Cases" Top 12 table + summaries).
 
 ---
 
-## CLI 助记前缀
+## Compliance and Legal Red Lines
 
-`srchunter`（如：`srchunter scope set <program>`、`srchunter recon run`、`srchunter findings new <type>`）。当前未实现 CLI，仅作命名约定。
+Every playbook ends with a "things not to do" section. General red lines (observed for every SRC):
+
+- ❌ Assets / domains out of scope → stop immediately and report
+- ❌ Actually exfiltrating others' PII → only prove accessibility, destroy immediately
+- ❌ Sustained load / DoS / heavy traffic → only 1–3 PoC packets, then stop immediately
+- ❌ Modifying others' data (even with write access) → verify only against objects you control
+- ❌ Phishing or social engineering in production → do not do it
+- ❌ Submitting unreproduced speculation → must have HTTP packets / screenshots / video evidence
+- ✅ Mark yourself with a test header (e.g., `X-Bug-Bounty: <handle>`)
+- ✅ Use two of your own accounts to role-play broken-access-control scenarios
+- ✅ Use your own OOB domain for SSRF probing; do not use someone else's DNSLog
+- ✅ Self-check with `references/templates/report-submission.md` before submitting
 
 ---
 
-## 引用 / 跨链结构
+## CLI Mnemonic Prefix
+
+`srchunter` (e.g., `srchunter scope set <program>`, `srchunter recon run`, `srchunter findings new <type>`). No CLI is currently implemented; this is only a naming convention.
+
+---
+
+## Reference / Cross-Link Structure
 
 ```
 src-hunter/
-├── SKILL.md                    # 本文件 — skill 入口
-├── README.md                   # 项目说明
+├── SKILL.md                    # this file — skill entry point
+├── README.md                   # project description
 └── references/
-    ├── methodology/   6 docs   # 通用打法
-    ├── playbooks/    19 docs   # 攻击类 playbook（每个含 H1 案例 + Payload 库）
-    ├── industry/      3 docs   # 行业垂直
-    ├── dictionaries/  3 docs   # 字典 / 凭据
-    ├── templates/     1 doc    # 报告模板
-    ├── h1-reports/             # 2887 份 H1 报告原始数据 + 141 类 MD
-    │   ├── raw/                # 原始 JSON（resume / 二次分析用）
-    │   └── by-weakness/        # 按 CWE 分类的 Markdown
-    └── payloader/              # 305 条结构化 payload 数据
-        ├── raw/                # JSON（机读）
-        ├── by-category/        # 按分类的 MD
-        ├── tools/              # 工具命令
-        └── waf-bypass.md       # 263 步骤 WAF 绕过集
+    ├── methodology/   6 docs   # general methodology
+    ├── playbooks/    19 docs   # attack-class playbooks (each with H1 cases + payload library)
+    ├── industry/      3 docs   # industry verticals
+    ├── dictionaries/  3 docs   # dictionaries / credentials
+    ├── templates/     1 doc    # report template
+    ├── h1-reports/             # 2,887 H1 reports raw data + 141 category MDs
+    │   ├── raw/                # raw JSON (for resume / secondary analysis)
+    │   └── by-weakness/        # Markdown grouped by CWE
+    └── payloader/              # 305 structured payload data
+        ├── raw/                # JSON (machine-readable)
+        ├── by-category/        # MD by category
+        ├── tools/              # tool commands
+        └── waf-bypass.md       # 263-step WAF bypass collection
 ```
 
 
-## 任务完成自检（声称完成前 MUST 通过）
+## Task Completion Self-Check (MUST pass before claiming completion)
 
-- [ ] 我是否执行了工作流中的每一步（而不是只阅读）？
-- [ ] 我是否基于 `tool-index` 使用了真实工具路径？
-- [ ] 我是否产出了可复现证据（命令/脚本/截图/报告）？
-- [ ] 我是否完成并回写了 RULES 要求的 Checklist 项？
+- [ ] Did I execute every step of the workflow (rather than just reading it)?
+- [ ] Did I use real tool paths based on `tool-index`?
+- [ ] Did I produce reproducible evidence (commands/scripts/screenshots/reports)?
+- [ ] Did I complete and write back the Checklist items required by RULES?
+
+## Merge Addendum: Controlled Execution Constraints
+
+Before starting any active step, confirm that the current case's `scope.md` exists and `auth.status=granted`; when there is no scope, run `case-init.ps1` and never auto-attach `-AuthGranted`. `field-journal/precedent-pentest.md` is a day-to-day operation reference and does not replace authorization boundaries; tool paths follow `tool-index.md`, and missing tools go through bootstrap.
+
+Use playbook skeletons read-only by default. Only open `payloader/` or `waf-bypass.md` when the scope is authorized and the user explicitly requests payloads. `h1-reports/` is the data asset described in the documentation; do not assume it is tracked in this repository. Evidence and reports must be based on actually captured requests, responses, screenshots, or HAR.

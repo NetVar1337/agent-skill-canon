@@ -554,30 +554,30 @@ Functions split into non-contiguous chunks connected by unconditional jumps. Def
 
 ### Control Flow Flattening (Advanced)
 
-> 完整的 OLLVM 脱密工作流、变种生态（Hikari/Polaris/O-MVLL/Tigress/Hodur 等）和社区工具调研见 [ollvm-deobfuscation.md](references/ollvm-deobfuscation.md)。
+> For the complete OLLVM deobfuscation workflow, the variant ecosystem (Hikari/Polaris/O-MVLL/Tigress/Hodur etc.), and a community tool survey, see [ollvm-deobfuscation.md](references/ollvm-deobfuscation.md).
 
 Beyond basic switch-case (see patterns.md): modern OLLVM variants use:
 - **Bogus control flow:** Fake branches with opaque predicates
 - **Instruction substitution:** `a + b` → `a - (-b)`, `a ^ b` → `(a | b) & ~(a & b)`
 - **String encryption:** Strings decrypted at runtime, cleared after use
 
-**现代变种（2026 社区活跃）：** Hikari (Anti Class Dump/String Encryption/Indirect Branch), Polaris (原 Pluto, 含 Trap Angr 专门坑 angr), O-MVLL (Python 驱动, Android 加固常用), Arkari (goron 基础, 间接跳转可被数据段只读对抗), amice (Rust, 含 VM Flatten 需 VM 逆向而非 deflat)。变种识别详见 ollvm-deobfuscation.md 第 1 节。
+**Modern variants (community-active in 2026):** Hikari (Anti Class Dump/String Encryption/Indirect Branch), Polaris (formerly Pluto, includes Trap Angr specifically to trip up angr), O-MVLL (Python-driven, common in Android hardening), Arkari (built on goron; its indirect jumps can be countered by marking the data section read-only), amice (Rust, includes VM Flatten which requires VM reversing rather than deflat). See Section 1 of ollvm-deobfuscation.md for variant identification.
 
-**Deobfuscation tools (社区活跃度排序):**
-- **obpo-plugin** (629⭐, IDA microcode+concolic 云插件, 效果最强): https://github.com/obpo-project/obpo-plugin
-- **ollvm-breaker** (441⭐, Binary Ninja, Android .so 实战): https://github.com/amimo/ollvm-breaker
-- **ollvm-unflattener** (265⭐, Miasm 符号执行, 纯脚本 x86/x64): https://github.com/cdong1012/ollvm-unflattener
-- **d810-ng** (223⭐, IDA, 集成 Z3, 覆盖 OLLVM/Tigress/Hodur/Approov): https://github.com/w00tzenheimer/d810-ng — **本地首选**
-- **DeObfBR** (96⭐, BR 间接分支混淆专项): https://github.com/Mrack/DeObfBR
-- **D-810** (原版, 已较少维护, 建议用 d810-ng): pattern-based deobfuscation, MBA simplification
+**Deobfuscation tools (ordered by community activity):**
+- **obpo-plugin** (629⭐, IDA microcode+concolic cloud plugin, strongest results): https://github.com/obpo-project/obpo-plugin
+- **ollvm-breaker** (441⭐, Binary Ninja, proven on Android .so): https://github.com/amimo/ollvm-breaker
+- **ollvm-unflattener** (265⭐, Miasm symbolic execution, pure-script x86/x64): https://github.com/cdong1012/ollvm-unflattener
+- **d810-ng** (223⭐, IDA, integrates Z3, covers OLLVM/Tigress/Hodur/Approov): https://github.com/w00tzenheimer/d810-ng — **local first choice**
+- **DeObfBR** (96⭐, specialized for BR indirect-branch obfuscation): https://github.com/Mrack/DeObfBR
+- **D-810** (original, now less maintained, d810-ng recommended): pattern-based deobfuscation, MBA simplification
 - **Miasm**: Symbolic execution for deobfuscation
 - **Arybo** / **SiMBA**: MBA expression simplification
 
 ```bash
-# d810-ng: 复制到 IDA plugins 目录, Ctrl-Shift-D 加载
-# 选择 Unflattener + MBA simplification + Opaque predicate removal
-# obpo: 右键 dispatcher → OBPO → Mark and process function (需联网)
-# ⚠️ Pluto/Polaris 的 Trap Angr pass 会让 angr 失效 → 改用 d810-ng/Unicorn
+# d810-ng: copy to the IDA plugins directory, load with Ctrl-Shift-D
+# Select Unflattener + MBA simplification + Opaque predicate removal
+# obpo: right-click dispatcher → OBPO → Mark and process function (requires network)
+# ⚠️ Pluto/Polaris's Trap Angr pass breaks angr → switch to d810-ng/Unicorn
 ```
 
 ### Mixed Boolean-Arithmetic (MBA) Identification & Simplification
@@ -779,58 +779,58 @@ Many CTF challenges stack multiple checks:
 
 ---
 
-## Agent 响应菜谱 A–T（Issue #65）
+## Agent Response Recipes A–T (Issue #65)
 
-> 检测类长文仍见 `malware-analysis/references/anti-analysis-techniques.md`；OLLVM 长流程见 `references/ollvm-deobfuscation.md`。  
-> 本节是 **触发 → 动作 → Evidence** 短菜谱，供 agent 在 Dynamic/Static 旁路选用。  
-> **授权隔离 lab 默认**；静态 patch / 改 PEB / 改返回值不是未授权目标上的默认动作。
+> For long-form detection material see `malware-analysis/references/anti-analysis-techniques.md`; for the long OLLVM workflow see `references/ollvm-deobfuscation.md`.  
+> This section is a set of short **trigger → action → Evidence** recipes for the agent to pick from for Dynamic/Static bypasses.  
+> **Authorized isolated lab by default**; static patching / PEB modification / return-value tampering is not the default action on unauthorized targets.
 
-### 使用规则
+### Usage rules
 
-1. 先 **识别并记录** 检测点（地址/API/字符串），再决定绕过或换环境。  
-2. 绕过尝试（成功或失败）MUST 写 Evidence；禁止把反调试退出写成「样本无害」。  
-3. H/S 不在此展开长文 → 跳转 OLLVM 专章。  
-4. L 仅 Linux/ELF 强制；Windows PE 主路径不因缺 TracerPid 判失败。  
-5. E 的 VT 对照为 **可选**；无外部情报源时写 n/a，不编造首次提交时间。
+1. First **identify and record** the detection point (address/API/string), then decide whether to bypass it or switch environments.  
+2. Bypass attempts (successful or failed) MUST be documented in Evidence; writing an anti-debug exit up as "sample is harmless" is forbidden.  
+3. H/S are not expanded into long form here → jump to the dedicated OLLVM chapter.  
+4. L is mandatory only for Linux/ELF; the main Windows PE path is not judged failed just because TracerPid is missing.  
+5. The VT cross-check in E is **optional**; write n/a when there is no external intelligence source — do not fabricate a first-submission time.
 
-### 全表 A–T
+### Full table A–T
 
-| ID | 触发 | 处理动作 | Evidence | 优先级 |
+| ID | Trigger | Handling action | Evidence | Priority |
 |----|------|----------|----------|--------|
-| **A** | `cpuid` 后条件跳（jz/jnz） | 识别 hypervisor 检测；lab 改标志位或 patch 跳转走恶意/真实业务分支；或换物理机 | `E-anti-debug-cpuid` | P0 |
-| **B** | `rdtsc` + sub/cmp 时间差 | bp `rdtsc` / hook 时间 API；或 patch 比较；避免只靠「等沙箱超时」 | `E-anti-debug-rdtsc` | P0 |
-| **C** | 字符串含 x64dbg/olly/windbg 等，或 Toolhelp 枚举 | bp `CreateToolhelp32Snapshot`→`Process32First/Next`；改匹配或跳过扫描分支 | `E-anti-debug-procscan` | P1 |
-| **D** | `AddVectoredExceptionHandler` + 故意访问违例 | bp 注册点；定位 VEH handler 分析；调试器可忽略特定异常 | `E-anti-debug-veh` | P1 |
-| **E** | TimeDateStamp 未来/0/荒谬；版本信息像合法厂商 | 与发现时间对照；**可选** VT 首次提交；`SigCheck` 看版本资源是否配合签名；无 VT → n/a | `E-meta-timestamp` | P2 |
-| **F** | 显示有数字签名但来源可疑 | `SigCheck`：链有效？吊销？签名时间 vs 编译时间；**无效/吊销不得降低**威胁等级 | `E-sig-forge` | P0 |
-| **G** | 多 PE 头、重叠节、节名伪装 | CFF/PE-bear/LoadPE 看真实映射与 EP 节；熵区分加密 vs 代码；不信节名 | `E-pe-anomaly` | P1 |
-| **H** | F5 大量 `while(1)+switch`、星形 CFG | **See** `ollvm-deobfuscation.md`（d810/deflat 等）；插件不全则动态记录块序重构 | `E-cff` | P1 指针 |
-| **I** | strings 无域名/IP 但有网/文件行为 | 找 Base64/XOR/自定义 decode；xref 解密函数；解密后 dump 回注 IDA | `E-string-decrypt` | P0 |
-| **J** | 文件大小 ≫ 节原始数据之和（Overlay） | 提 overlay；`file`/熵；IDA 搜偏移引用；加密则动态抓密钥 | `E-overlay` | P1 |
-| **K** | `fs:[0x30]`/`gs:[0x60]` → BeingDebugged / NtGlobalFlag | 改 PEB 标志或 ScyllaHide；或 patch 条件跳 | `E-anti-debug-peb` | P0 |
-| **L** | 读 `/proc/self/status` 查 TracerPid≠0 | **Linux/ELF**：hook fopen/read 或 patch；Windows 不强制 | `E-anti-debug-tracerpid` | P2 平台 |
-| **M** | `int3`(0xCC) 或读 DR0–DR7 | int3→nop；硬件 BP 检测用 ScyllaHide/软 BP；CRC 自检见补丁 6 | `E-anti-debug-bp` | P1 |
-| **N** | IAT 空/极少 + 自写哈希解析 API | bp `GetProcAddress`/`Ldr*`；哈希反查导出表；回注符号；与「干净 IAT」铁律协同 | `E-api-hash` | P0 |
-| **O** | 线性反汇编大量 db、花指令致错位 | F5/Hex-Rays；动态确认真流；junk nop 后 reanalyze；静还不全以动态为准 | `E-junk-code` | P2 |
-| **P** | `NtQueryInformationProcess` class 7/30/31 | ScyllaHide 或 hook 返回；记 InformationClass | `E-anti-debug-ntqip` | P0 |
-| **Q** | `.rsrc` 过大/高熵/非标准 RT_RCDATA | Resource Hacker/CFF 提取；`FindResource`/`LoadResource` xref；解密后 dump | `E-rsrc-payload` | P1 |
-| **R** | 静态 IAT 无某 DLL，运行时才用 | 查 Delay Import Table；bp `__delayLoadHelper2` 或首次调用；纳入能力评估 | `E-delay-import` | P1 |
-| **S** | 恒真/恒假条件、大片死代码 | **See** ollvm / angr 等；patch 唯一可达分支或动态路径回注 | `E-opaque-pred` | P1 指针 |
-| **T** | ASCII strings 无结果，数据区像 UTF-16 | `strings -el` 或 `-encoding=utf-16le`；IDA Alt+A unicode；纳入 IOC | `E-wide-strings` | P0 |
+| **A** | Conditional jump after `cpuid` (jz/jnz) | Identify hypervisor detection; in the lab, patch the flag or patch the jump to take the malicious/real business branch; or switch to a physical machine | `E-anti-debug-cpuid` | P0 |
+| **B** | `rdtsc` + sub/cmp timing delta | bp `rdtsc` / hook time APIs; or patch the comparison; avoid relying solely on "waiting out the sandbox timeout" | `E-anti-debug-rdtsc` | P0 |
+| **C** | Strings contain x64dbg/olly/windbg etc., or Toolhelp enumeration | bp `CreateToolhelp32Snapshot`→`Process32First/Next`; change the match or skip the scanning branch | `E-anti-debug-procscan` | P1 |
+| **D** | `AddVectoredExceptionHandler` + deliberate access violation | bp at the registration point; locate and analyze the VEH handler; the debugger can ignore specific exceptions | `E-anti-debug-veh` | P1 |
+| **E** | TimeDateStamp in the future/0/absurd; version info looks like a legitimate vendor | Cross-check against discovery time; **optional** VT first submission; `SigCheck` to see whether version resources are consistent with the signature; no VT → n/a | `E-meta-timestamp` | P2 |
+| **F** | Shows a digital signature but the source is suspicious | `SigCheck`: chain valid? revoked? signature time vs compile time; **invalid/revoked MUST NOT lower** the threat rating | `E-sig-forge` | P0 |
+| **G** | Multiple PE headers, overlapping sections, disguised section names | CFF/PE-bear/LoadPE to inspect the real mapping and EP section; entropy to distinguish encrypted vs code; do not trust section names | `E-pe-anomaly` | P1 |
+| **H** | F5 shows lots of `while(1)+switch`, star-shaped CFG | **See** `ollvm-deobfuscation.md` (d810/deflat etc.); if plugins fall short, dynamically record block order and reconstruct | `E-cff` | P1 pointer |
+| **I** | strings shows no domains/IPs but there is network/file behavior | Look for Base64/XOR/custom decode; xref the decryption function; after decryption, dump and re-import into IDA | `E-string-decrypt` | P0 |
+| **J** | File size ≫ sum of raw section data (Overlay) | Extract the overlay; `file`/entropy; search IDA for offset references; if encrypted, grab the key dynamically | `E-overlay` | P1 |
+| **K** | `fs:[0x30]`/`gs:[0x60]` → BeingDebugged / NtGlobalFlag | Patch PEB flags or use ScyllaHide; or patch the conditional jump | `E-anti-debug-peb` | P0 |
+| **L** | Reads `/proc/self/status` to check TracerPid≠0 | **Linux/ELF**: hook fopen/read or patch; not mandatory on Windows | `E-anti-debug-tracerpid` | P2 platform |
+| **M** | `int3`(0xCC) or reads DR0–DR7 | int3→nop; for hardware BP detection use ScyllaHide/soft BPs; for the CRC self-check see patch 6 | `E-anti-debug-bp` | P1 |
+| **N** | IAT empty/very small + hand-rolled hash-resolved APIs | bp `GetProcAddress`/`Ldr*`; reverse-lookup the export table by hash; re-inject symbols; coordinate with the "clean IAT" iron rule | `E-api-hash` | P0 |
+| **O** | Linear disassembly shows lots of db, junk instructions causing misalignment | F5/Hex-Rays; confirm the real flow dynamically; nop the junk then reanalyze; if static remains incomplete, defer to dynamic | `E-junk-code` | P2 |
+| **P** | `NtQueryInformationProcess` class 7/30/31 | ScyllaHide or hook the return; record the InformationClass | `E-anti-debug-ntqip` | P0 |
+| **Q** | `.rsrc` oversized/high-entropy/non-standard RT_RCDATA | Extract with Resource Hacker/CFF; xref `FindResource`/`LoadResource`; dump after decryption | `E-rsrc-payload` | P1 |
+| **R** | A DLL absent from the static IAT but used at runtime | Check the Delay Import Table; bp `__delayLoadHelper2` or the first call; fold into the capability assessment | `E-delay-import` | P1 |
+| **S** | Always-true/always-false conditions, large swaths of dead code | **See** ollvm / angr etc.; patch the single reachable branch or re-inject the dynamic path | `E-opaque-pred` | P1 pointer |
+| **T** | ASCII strings yield nothing, data region looks like UTF-16 | `strings -el` or `-encoding=utf-16le`; IDA Alt+A unicode; fold into IOCs | `E-wide-strings` | P0 |
 
-### 与主 workflow 的挂接
+### Hookup with the main workflow
 
-| 阶段 | 菜谱 |
+| Phase | Recipes |
 |------|------|
-| Triage | E, F, G, T（元数据/签名/节/宽串） |
-| Static | H, I, J, N 线索, O, Q, R, S |
-| Dynamic | A–D, K, L, M, N, P + 既有断点四级火箭与无行为应急 |
-| 失败 | 任何绕不过的检测 → Evidence + 换工具/环境；不静默降威胁 |
+| Triage | E, F, G, T (metadata/signature/sections/wide strings) |
+| Static | H, I, J, N leads, O, Q, R, S |
+| Dynamic | A–D, K, L, M, N, P + the existing four-stage breakpoint ladder and no-behavior contingency |
+| Failure | Any detection that cannot be bypassed → Evidence + switch tool/environment; never silently downgrade the threat |
 
-### 工具注记（非强制安装清单）
+### Tool notes (not a mandatory installation list)
 
-- Windows 用户态：x64dbg + **ScyllaHide**（PEB/NtQuery/硬件 BP 等批量隐藏）  
-- 签名：Sysinternals **SigCheck**  
-- PE 结构：PE-bear / CFF Explorer  
-- 平坦化：见 ollvm 专章工具表（d810-ng 等）  
-- 无某工具时：等价命令 + 记失败，禁止假装已验证签名/已脱平坦化
+- Windows user mode: x64dbg + **ScyllaHide** (bulk hiding of PEB/NtQuery/hardware BPs etc.)  
+- Signatures: Sysinternals **SigCheck**  
+- PE structure: PE-bear / CFF Explorer  
+- Flattening: see the tool table in the OLLVM chapter (d810-ng etc.)  
+- When a tool is missing: use equivalent commands + record the failure; pretending a signature was verified or de-flattening was completed is forbidden

@@ -1,3 +1,6 @@
 interface:
   display_name: "Setup Pre-Commit"
   short_description: "Add pre-commit quality checks"
+
+policy:
+  allow_implicit_invocation: false

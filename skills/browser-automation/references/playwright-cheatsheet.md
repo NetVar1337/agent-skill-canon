@@ -1,91 +1,91 @@
-# 浏览器与桌面自动化速查
+# Browser and Desktop Automation Cheat Sheet
 
-> 覆盖 Playwright（浏览器自动化）和 OpenReverse（Windows 桌面自动化）的常用命令与模式。
-> 面向渗透测试、逆向工程、自动化采集场景。
+> Covers common commands and patterns for Playwright (browser automation) and OpenReverse (Windows desktop automation).
+> Aimed at penetration testing, reverse engineering, and automated collection scenarios.
 
 ---
 
-## Playwright / agent-browser 命令速查
+## Playwright / agent-browser Command Cheat Sheet
 
-### 导航与生命周期
+### Navigation and Lifecycle
 
 ```bash
-# 打开页面
+# Open a page
 agent-browser open "https://target.com/login"
 
-# 等待页面加载完成
+# Wait for the page to finish loading
 agent-browser wait --load networkidle
 
-# 关闭浏览器（必须执行，否则进程泄漏）
+# Close the browser (must be executed, otherwise the process leaks)
 agent-browser close
 ```
 
-### 页面快照
+### Page Snapshots
 
 ```bash
-# 完整无障碍树（调试用）
+# Full accessibility tree (for debugging)
 agent-browser snapshot
 
-# 仅可交互元素（推荐，返回 @e1, @e2... 引用）
+# Interactive elements only (recommended; returns @e1, @e2... references)
 agent-browser snapshot -i
 ```
 
-### 元素交互
+### Element Interaction
 
 ```bash
-# 点击
+# Click
 agent-browser click @e1
 
-# 填写文本框
+# Fill a text box
 agent-browser fill @e2 "admin"
 
-# 逐字符输入（适合有 JS 监听的输入框）
+# Type character by character (suitable for inputs with JS listeners)
 agent-browser type @e2 "password123"
 
-# 按键
+# Key presses
 agent-browser press Enter
 agent-browser press Tab
 agent-browser press Escape
 
-# 滚动
+# Scrolling
 agent-browser scroll down 500
 agent-browser scroll up 300
 ```
 
-### 信息获取
+### Information Retrieval
 
 ```bash
-# 获取元素文本
+# Get element text
 agent-browser get text @e1
 
-# 获取页面标题
+# Get the page title
 agent-browser get title
 
-# 获取当前 URL
+# Get the current URL
 agent-browser get url
 ```
 
-### 等待策略
+### Wait Strategies
 
 ```bash
-# 等待元素出现
+# Wait for an element to appear
 agent-browser wait @e1
 
-# 等待固定时间（毫秒）
+# Wait a fixed duration (milliseconds)
 agent-browser wait 2000
 
-# 等待网络空闲
+# Wait for network idle
 agent-browser wait --load networkidle
 
-# 等待导航完成
+# Wait for navigation to complete
 agent-browser wait --load domcontentloaded
 ```
 
 ---
 
-## 渗透测试常用模式
+## Common Penetration Testing Patterns
 
-### 自动化登录
+### Automated Login
 
 ```bash
 agent-browser open "https://target.com/login"
@@ -94,10 +94,10 @@ agent-browser fill @username "admin"
 agent-browser fill @password "password123"
 agent-browser click @login_button
 agent-browser wait --load networkidle
-agent-browser get url                    # 确认是否跳转到后台
+agent-browser get url                    # confirm whether it redirected to the backend
 ```
 
-### XSS Payload 注入
+### XSS Payload Injection
 
 ```bash
 agent-browser open "https://target.com/search"
@@ -105,10 +105,10 @@ agent-browser snapshot -i
 agent-browser fill @search_input "<script>alert(1)</script>"
 agent-browser click @search_button
 agent-browser wait --load networkidle
-agent-browser snapshot                   # 检查 payload 是否被渲染
+agent-browser snapshot                   # check whether the payload got rendered
 ```
 
-### 表单批量提交（配合脚本）
+### Batch Form Submission (with scripting)
 
 ```powershell
 $payloads = @("' OR 1=1--", "<img src=x onerror=alert(1)>", "{{7*7}}")
@@ -118,16 +118,16 @@ foreach ($p in $payloads) {
     agent-browser fill @input "$p"
     agent-browser click @submit
     agent-browser wait --load networkidle
-    agent-browser snapshot              # 检查响应
+    agent-browser snapshot              # check the response
 }
 agent-browser close
 ```
 
-### Cookie / LocalStorage 提取
+### Cookie / LocalStorage Extraction
 
 ```bash
-# 通过 Playwright API（Node.js 脚本模式）
-# agent-browser 不直接暴露 cookie，需要用脚本模式
+# Via the Playwright API (Node.js script mode)
+# agent-browser does not directly expose cookies; script mode is required
 ```
 
 ```javascript
@@ -139,11 +139,11 @@ const { chromium } = require('playwright');
     const page = await context.newPage();
     await page.goto('https://target.com');
     
-    // 提取 cookies
+    // Extract cookies
     const cookies = await context.cookies();
     console.log(JSON.stringify(cookies, null, 2));
     
-    // 提取 localStorage
+    // Extract localStorage
     const storage = await page.evaluate(() => JSON.stringify(localStorage));
     console.log(storage);
     
@@ -151,105 +151,105 @@ const { chromium } = require('playwright');
 })();
 ```
 
-### 截图取证
+### Screenshot Forensics
 
 ```bash
-# agent-browser 模式
+# agent-browser mode
 agent-browser open "https://target.com/admin"
 agent-browser wait --load networkidle
-# 截图功能取决于 agent-browser 版本
+# Screenshot support depends on the agent-browser version
 ```
 
 ```javascript
-// playwright 脚本模式
+// playwright script mode
 await page.screenshot({ path: 'evidence.png', fullPage: true });
 ```
 
 ---
 
-## Playwright Node.js API 速查
+## Playwright Node.js API Cheat Sheet
 
-### 基础模板
+### Basic Template
 
 ```javascript
 const { chromium } = require('playwright');
 
 (async () => {
     const browser = await chromium.launch({
-        headless: true,           // 无头模式
-        // proxy: { server: 'http://127.0.0.1:8080' }  // 走 Burp 代理
+        headless: true,           // headless mode
+        // proxy: { server: 'http://127.0.0.1:8080' }  // route through a Burp proxy
     });
     const context = await browser.newContext({
-        ignoreHTTPSErrors: true,  // 忽略证书错误
+        ignoreHTTPSErrors: true,  // ignore certificate errors
         userAgent: 'Mozilla/5.0 ...',
     });
     const page = await context.newPage();
     
     await page.goto('https://target.com');
-    // ... 操作 ...
+    // ... actions ...
     
     await browser.close();
 })();
 ```
 
-### 常用选择器
+### Common Selectors
 
 ```javascript
-// CSS 选择器
+// CSS selectors
 await page.click('#login-btn');
 await page.fill('input[name="username"]', 'admin');
 
-// 文本选择器
+// Text selectors
 await page.click('text=Submit');
 await page.click('button:has-text("Login")');
 
 // XPath
 await page.click('xpath=//button[@type="submit"]');
 
-// 组合
+// Combined
 await page.click('form >> input[type="submit"]');
 ```
 
-### 网络拦截
+### Network Interception
 
 ```javascript
-// 拦截请求
+// Intercept requests
 await page.route('**/api/**', route => {
     console.log('API call:', route.request().url());
     route.continue();
 });
 
-// 修改请求
+// Modify a request
 await page.route('**/api/auth', route => {
     route.continue({
         headers: { ...route.request().headers(), 'X-Admin': 'true' }
     });
 });
 
-// 拦截响应
+// Intercept a response
 await page.route('**/api/user', async route => {
     const response = await route.fetch();
     const json = await response.json();
-    json.role = 'admin';  // 篡改响应
+    json.role = 'admin';  // tamper with the response
     route.fulfill({ response, json });
 });
 ```
 
-### 等待与断言
+### Waiting and Assertions
 
 ```javascript
-// 等待元素
+// Wait for an element
 await page.waitForSelector('#result');
 await page.waitForSelector('.error', { state: 'visible' });
 
-// 等待网络请求
+// Wait for a network request
 const [response] = await Promise.all([
     page.waitForResponse('**/api/login'),
     page.click('#login-btn'),
 ]);
 console.log(response.status(), await response.json());
 
-// 等待导航
+// Wait for navigation
 await Promise.all([
     page.waitForNavigation(),
     page.click('a[href="/admin"]'),
@@ -258,141 +258,141 @@ await Promise.all([
 
 ---
 
-## OpenReverse 桌面自动化速查
+## OpenReverse Desktop Automation Cheat Sheet
 
-### 模式选择
+### Mode Selection
 
-| 模式 | 命令前缀 | 适合场景 |
+| Mode | Command prefix | Suitable scenarios |
 |------|---------|---------|
-| UIA | `openreverse uia ...` | 标准 Windows 控件（按钮、文本框、列表） |
-| CUA | `openreverse cua ...` | 复杂/非标准 GUI（IDA 反汇编视图、自定义渲染界面） |
+| UIA | `openreverse uia ...` | Standard Windows controls (buttons, text boxes, lists) |
+| CUA | `openreverse cua ...` | Complex/non-standard GUIs (IDA disassembly views, custom-rendered interfaces) |
 
-### UIA 模式（结构化控件操作）
+### UIA Mode (Structured Control Operations)
 
 ```bash
-# 启动应用
+# Launch an application
 openreverse uia launch "C:\Tools\x64dbg\x64dbg.exe"
 
-# 获取窗口树
+# Get the window tree
 openreverse uia tree
 
-# 点击按钮
+# Click a button
 openreverse uia click "Button:Open"
 
-# 填写文本框
+# Fill a text box
 openreverse uia fill "Edit:FilePath" "C:\sample.exe"
 
-# 选择菜单
+# Select a menu
 openreverse uia menu "File > Open"
 
-# 获取控件文本
+# Get control text
 openreverse uia get-text "Edit:Output"
 ```
 
-### CUA 模式（视觉驱动交互）
+### CUA Mode (Vision-Driven Interaction)
 
 ```bash
-# 截图当前屏幕
+# Screenshot the current screen
 openreverse cua screenshot
 
-# 点击屏幕坐标
+# Click screen coordinates
 openreverse cua click 500 300
 
-# 双击
+# Double-click
 openreverse cua dblclick 500 300
 
-# 输入文本
+# Type text
 openreverse cua type "search string"
 
-# 按键
+# Key presses
 openreverse cua key "ctrl+g"    # IDA: Go to address
 openreverse cua key "F5"        # IDA: Decompile
 openreverse cua key "F9"        # x64dbg: Run
 ```
 
-### 网络观察（mitmproxy）
+### Network Observation (mitmproxy)
 
 ```bash
-# 启动代理模式观察
+# Start proxy mode for observation
 openreverse network start --mode proxy --port 8888
 
-# 启动本地抓取模式
+# Start local capture mode
 openreverse network start --mode local --filter "target.exe"
 
-# 获取捕获的请求
+# Get captured requests
 openreverse network list
 
-# 导出为 HAR
+# Export as HAR
 openreverse network export har output.har
 
-# 停止观察
+# Stop observing
 openreverse network stop
 ```
 
 ---
 
-## 逆向工具自动化组合
+## Reverse Engineering Tool Automation Combos
 
-### IDA Pro 自动化（OpenReverse + ida-reverse）
+### IDA Pro Automation (OpenReverse + ida-reverse)
 
 ```text
-场景：批量分析多个样本
+Scenario: batch analysis of multiple samples
 
 1. openreverse cua launch "ida64.exe"
-2. 对每个样本：
-   a. openreverse cua key "ctrl+o"        # 打开文件对话框
+2. For each sample:
+   a. openreverse cua key "ctrl+o"        # open the file dialog
    b. openreverse uia fill "Edit:FileName" "sample_N.exe"
    c. openreverse uia click "Button:Open"
-   d. 等待分析完成（轮询 IDA 标题栏）
-   e. 通过 ida-reverse MCP 工具提取结果
-   f. openreverse cua key "ctrl+w"        # 关闭数据库
+   d. Wait for analysis to complete (poll the IDA title bar)
+   e. Extract results via the ida-reverse MCP tools
+   f. openreverse cua key "ctrl+w"        # close the database
 ```
 
-### x64dbg 自动化调试
+### x64dbg Automated Debugging
 
 ```text
-场景：自动化断点设置与数据采集
+Scenario: automated breakpoint setup and data collection
 
 1. openreverse uia launch "x64dbg.exe"
-2. openreverse cua key "F3"               # 打开文件
+2. openreverse cua key "F3"               # open file
 3. openreverse uia fill "Edit:FileName" "target.exe"
 4. openreverse uia click "Button:Open"
 5. openreverse cua key "ctrl+g"           # Go to address
 6. openreverse cua type "0x401000"
-7. openreverse cua key "F2"               # 设置断点
-8. openreverse cua key "F9"               # 运行
-9. openreverse cua screenshot             # 截图保存状态
+7. openreverse cua key "F2"               # set a breakpoint
+8. openreverse cua key "F9"               # run
+9. openreverse cua screenshot             # screenshot to save the state
 ```
 
 ---
 
-## 常见问题与解决
+## Common Problems and Solutions
 
-| 问题 | 原因 | 解决 |
+| Problem | Cause | Solution |
 |------|------|------|
-| agent-browser 无响应 | 进程泄漏 | 先 `agent-browser close`，再重新 open |
-| 元素引用失效 | 页面已刷新 | 重新 `snapshot -i` 获取新引用 |
-| 填表无效 | JS 监听 input 事件 | 用 `type` 代替 `fill` |
-| HTTPS 证书错误 | 自签名证书 | Playwright: `ignoreHTTPSErrors: true` |
-| 页面加载超时 | 网络慢/资源多 | 增加 timeout 或用 `domcontentloaded` |
-| UIA 找不到控件 | 应用使用自绘控件 | 切换到 CUA 模式 |
-| CUA 点击偏移 | 分辨率/DPI 不匹配 | 先 screenshot 确认坐标 |
+| agent-browser unresponsive | Process leak | First `agent-browser close`, then open again |
+| Element reference invalid | Page has refreshed | Re-run `snapshot -i` to get new references |
+| Form fill has no effect | JS listens to input events | Use `type` instead of `fill` |
+| HTTPS certificate error | Self-signed certificate | Playwright: `ignoreHTTPSErrors: true` |
+| Page load timeout | Slow network/many resources | Increase the timeout or use `domcontentloaded` |
+| UIA cannot find a control | App uses custom-drawn controls | Switch to CUA mode |
+| CUA click offset | Resolution/DPI mismatch | Take a screenshot first to confirm coordinates |
 
 ---
 
-## 安装与依赖
+## Installation and Dependencies
 
 ### Playwright
 
 ```powershell
-# 安装 Node.js（如果没有）
+# Install Node.js (if not present)
 winget install OpenJS.NodeJS.LTS
 
-# 安装 Playwright
+# Install Playwright
 npm install -g playwright
-npx playwright install          # 下载浏览器引擎
+npx playwright install          # download browser engines
 
-# 安装 agent-browser CLI
+# Install the agent-browser CLI
 npm install -g agent-browser
 ```
 
@@ -402,24 +402,24 @@ npm install -g agent-browser
 git clone https://github.com/zhexulong/openreverse.git
 cd openreverse
 npm install
-npm run init:agents -- --target=all <项目路径>
+npm run init:agents -- --target=all <project path>
 
-# 可选：CUA 运行时
+# Optional: CUA runtime
 npm run install:cua-runtime
 npm run doctor:cua-runtime
 
-# 可选：网络观察
+# Optional: network observation
 npm run install:mitmproxy
 npm run doctor:network
 ```
 
 ---
 
-## 相关资源
+## Related Resources
 
-| 资源 | 说明 | 链接 |
+| Resource | Description | Link |
 |------|------|------|
-| Playwright 官方文档 | API 参考 | https://playwright.dev/docs/intro |
-| OpenReverse | 桌面自动化框架 | https://github.com/zhexulong/openreverse |
-| mitmproxy | HTTP/HTTPS 代理 | https://mitmproxy.org/ |
-| Windows UI Automation | UIA 文档 | https://learn.microsoft.com/en-us/windows/win32/winauto/entry-uiauto-win32 |
+| Playwright official docs | API reference | https://playwright.dev/docs/intro |
+| OpenReverse | Desktop automation framework | https://github.com/zhexulong/openreverse |
+| mitmproxy | HTTP/HTTPS proxy | https://mitmproxy.org/ |
+| Windows UI Automation | UIA documentation | https://learn.microsoft.com/en-us/windows/win32/winauto/entry-uiauto-win32 |

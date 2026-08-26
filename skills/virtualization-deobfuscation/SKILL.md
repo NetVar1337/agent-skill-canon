@@ -17,7 +17,13 @@ metadata:
 ## Overview
 Virtualization replaces native semantics with an interpreter whose ISA, dispatch, state, encoding, and handlers may be randomized per build. The robust objective is not to assign folklore names to handlers. It is to recover a verified relation between protected inputs, state transitions, branches, memory effects, and outputs.
 
-Back Engineering Labs’ current guidance explicitly treats its VMProtect 2 handler-identification project as legacy and brittle. Its May 9, 2026 Themida work advocates incremental lifting, stack/load-store propagation, constant propagation, DCE, and control-flow recovery with minimal VM-specific logic. Apply that principle across protectors.
+Back Engineering Labs’ current guidance explicitly treats its VMProtect 2 handler-identification project as legacy and brittle (`aftermathlabs/vmp2`). Apply that principle across protectors.
+
+Aftermath 2026 writeups (use these as the current method, not vmp2):
+- 2026-05-09 [Static Devirtualization of Themida](https://aftermathlabs.net/blog/09/05/2026/) — guided symbolic eval; const promotion & memory model; fold / DSE / combine / branch fold; VMEXIT + virtual CF; dead-dependency + RSP rewrite; 1:1 lower (BLARE2). Corpus: `aftermathlabs/themida-devirt`.
+- 2026-07-31 [Static Devirtualization of Tencent VM](https://aftermathlabs.net/blog/31/07/2026/) — boxed instructions, CET/SEH compatibility, guided SE, virtualized jcc, MBA identity reduction, coverage stats. ACE/Proton interoperability framing.
+
+Do not lower through LLVM just to pretty-print. Aftermath’s stated preference is 1:1 lift/lower (BLARE2). Mergen/Dna remain valid when LLVM *is* the chosen product (`llvm-lift-deobfuscation`).
 
 ## Authorization Boundary
 Use for owned or explicitly authorized binaries, research challenges, and isolated malware analysis. Game binaries may be studied only offline and lawfully. Do not disable anti-cheat, instrument live multiplayer clients, bypass integrity/attestation, extract secrets, or create cheating capabilities.
